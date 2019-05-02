@@ -14,6 +14,15 @@ echo $THING | app
 
 Instead, a single binary can be used to accomplish most of these goals.
 
+* [Authentication](#authentication)
+* [Secret Fetching](#secret-fetching)
+* [Implementation Examples](#implementation-examples)
+* [Development](#development)
+* [Usage](#usage)
+  + [Deployment](#deployment)
+* [License](#license)
+* [Contributions](#contributions)
+
 ### Authentication
 
 The following authentication methods are supported:
@@ -319,9 +328,29 @@ as a representation of the following vault data:
 
 **Security Consideration** - When using the GCP IAM Auth type, ensure that the capability for the GCP SA to use the `signjwt` permission is limited only to the service accounts you wish to authenticate with to Vault. Providing your GCP SA the `signjwt` permission, such as through `iam.serviceAccountTokenCreator`, when done at the project level will over-authorize your service account to be able to sign JWTs of any other service account in the project, thus impersonating them. It is best practice to bind these permissions against the service account itself, and not at the project level. For more information, see the [GCP Documentation](https://cloud.google.com/iam/docs/granting-roles-to-service-accounts#granting_access_to_a_service_account_for_a_resource) on how to grant permissions against a specific service account.
 
-----
+Development
+-----------
 
-#### Usage Examples
+### Building
+
+Building is easy to do. Make sure to setup your local environment according to
+https://golang.org/doc/code.html. Once setup, you should be able to build the
+binaries using the following command:
+
+```
+make build
+```
+
+Tests are run via:
+
+```
+make test
+```
+
+Usage
+-----
+
+#### Usage Example
 
 ```
 Usage of daytona:
@@ -364,3 +393,45 @@ Usage of daytona:
   -auth-mount string
         the _FULL_ path to a vault auth mount location (this differs from the other auth mount flags) (env: AUTH_MOUNT) (default depends on environment)
 ```
+
+#### Deployment
+
+DAYTONA is not deployed to any public image registry as we'd like to assume you're comfortable with deploying this somewhere that you trust.
+
+Building a docker image:
+```
+make image
+```
+
+Use the `REGISTRY` environment variable to define where you'd like the image to be pushed:
+
+```
+REGISTRY=gcr.io/supa-fast-c432 make push-image
+```
+
+Or, you can simply deploy the binary. It can be built via:
+
+```
+make build
+```
+
+# License
+
+Copyright 2019 GM Cruise LLC
+
+Licensed under the [Apache License Version 2.0](LICENSE) (the "License");
+you may not use this project except in compliance with the License.
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+# Contributions
+
+Contributions are welcome! Please see the agreement for contributions in
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+Commits must be made with a Sign-off (`git commit -s`) certifying that you
+agree to the provisions in [CONTRIBUTING.md](CONTRIBUTING.md).

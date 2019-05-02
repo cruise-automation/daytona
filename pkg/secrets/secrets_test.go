@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package main
+package secrets
 
 import (
 	"encoding/json"
@@ -26,10 +26,15 @@ import (
 	"strings"
 	"testing"
 
+	cfg "github.com/cruise-automation/daytona/pkg/config"
+	"github.com/cruise-automation/daytona/pkg/helpers/testhelpers"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSecretPath(t *testing.T) {
+	var config cfg.Config
+
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, `
 		{
@@ -45,7 +50,7 @@ func TestSecretPath(t *testing.T) {
 		`)
 	}))
 	defer ts.Close()
-	client, err := getTestClient(ts.URL)
+	client, err := testhelpers.GetTestClient(ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,8 +63,8 @@ func TestSecretPath(t *testing.T) {
 
 	os.Setenv("VAULT_SECRET_APPLICATIONA", "secret/applicationA")
 	defer os.Unsetenv("VAULT_SECRET_APPLICATIONA")
-	config.secretPayloadPath = file.Name()
-	secretFetcher(client)
+	config.SecretPayloadPath = file.Name()
+	SecretFetcher(client, config)
 
 	secrets := make(map[string]string)
 	data, err := ioutil.ReadFile(file.Name())
@@ -76,6 +81,8 @@ func TestSecretPath(t *testing.T) {
 }
 
 func TestSecretDirectPath(t *testing.T) {
+	var config cfg.Config
+
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, `
 		{
@@ -91,11 +98,11 @@ func TestSecretDirectPath(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client, err := getTestClient(ts.URL)
+	client, err := testhelpers.GetTestClient(ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	config.secretPayloadPath = ""
+	config.SecretPayloadPath = ""
 	file, err := ioutil.TempFile(os.TempDir(), "secret-direct-path-")
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +113,7 @@ func TestSecretDirectPath(t *testing.T) {
 	os.Setenv("DAYTONA_SECRET_DESTINATION_applicationa", file.Name())
 	defer os.Unsetenv("VAULT_SECRET_APPLICATIONA")
 	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_applicationa")
-	secretFetcher(client)
+	SecretFetcher(client, config)
 
 	data, err := ioutil.ReadFile(file.Name())
 	if err != nil {
@@ -116,6 +123,8 @@ func TestSecretDirectPath(t *testing.T) {
 }
 
 func TestSecretAWalk(t *testing.T) {
+	var config cfg.Config
+
 	ts := httptest.NewTLSServer(
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
@@ -137,7 +146,7 @@ func TestSecretAWalk(t *testing.T) {
 			}))
 	defer ts.Close()
 
-	client, err := getTestClient(ts.URL)
+	client, err := testhelpers.GetTestClient(ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,8 +159,8 @@ func TestSecretAWalk(t *testing.T) {
 
 	os.Setenv("VAULT_SECRETS_COMMON", "secret/path/common")
 	defer os.Unsetenv("VAULT_SECRETS_COMMON")
-	config.secretPayloadPath = file.Name()
-	secretFetcher(client)
+	config.SecretPayloadPath = file.Name()
+	SecretFetcher(client, config)
 
 	secrets := make(map[string]string)
 	data, err := ioutil.ReadFile(file.Name())

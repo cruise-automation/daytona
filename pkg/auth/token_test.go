@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package main
+package auth
 
 import (
 	"fmt"
@@ -24,6 +24,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cruise-automation/daytona/pkg/helpers/testhelpers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,12 +35,11 @@ func TestInvalidToken(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client, err := getTestClient(ts.URL)
+	client, err := testhelpers.GetTestClient(ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 	client.SetToken(testToken)
-	generateStandardTestConfig()
 
 	assert.Equal(t, false, checkToken(client))
 }
@@ -50,12 +50,11 @@ func TestValidToken(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client, err := getTestClient(ts.URL)
+	client, err := testhelpers.GetTestClient(ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 	client.SetToken(testToken)
-	generateStandardTestConfig()
 
 	assert.Equal(t, true, checkToken(client))
 }
@@ -76,7 +75,7 @@ func TestFileToken(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	client, err := getTestClient(ts.URL)
+	client, err := testhelpers.GetTestClient(ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
