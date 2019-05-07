@@ -14,6 +14,15 @@ echo $THING | app
 
 Instead, a single binary can be used to accomplish most of these goals.
 
+* [Authentication](#authentication)
+* [Secret Fetching](#secret-fetching)
+* [Implementation Examples](#implementation-examples)
+* [Development](#development)
+* [Usage](#usage)
+  + [Deployment](#deployment)
+* [License](#license)
+* [Contributions](#contributions)
+
 ### Authentication
 
 The following authentication methods are supported:
@@ -319,48 +328,114 @@ as a representation of the following vault data:
 
 **Security Consideration** - When using the GCP IAM Auth type, ensure that the capability for the GCP SA to use the `signjwt` permission is limited only to the service accounts you wish to authenticate with to Vault. Providing your GCP SA the `signjwt` permission, such as through `iam.serviceAccountTokenCreator`, when done at the project level will over-authorize your service account to be able to sign JWTs of any other service account in the project, thus impersonating them. It is best practice to bind these permissions against the service account itself, and not at the project level. For more information, see the [GCP Documentation](https://cloud.google.com/iam/docs/granting-roles-to-service-accounts#granting_access_to_a_service_account_for_a_resource) on how to grant permissions against a specific service account.
 
-----
+Development
+-----------
 
-#### Usage Examples
+### Building
+
+Building is easy to do. Make sure to setup your local environment according to
+https://golang.org/doc/code.html. Once setup, you should be able to build the
+binaries using the following command:
+
+```
+make build
+```
+
+Tests are run via:
+
+```
+make test
+```
+
+Usage
+-----
+
+#### Usage Example
 
 ```
 Usage of daytona:
   -address string
-        (env: VAULT_ADDR) (default "https://vault.company.com:8200")
+      Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied
   -auto-renew
-        if enabled, starts the token renewal service (env: AUTO_RENEW)
+      if enabled, starts the token renewal service (env: AUTO_RENEW)
+  -aws-auth
+      select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)
   -entrypoint
-        if enabled, execs the command after the separator (--) when done. mostly useful with -secret-env (env: ENTRYPOINT)
+      if enabled, execs the command after the separator (--) when done. mostly useful with -secret-env (env: ENTRYPOINT)
   -gcp-auth
-        select Google Cloud Platform IAM auth as the vault authentication mechanism (env: GCP_AUTH)
+      select Google Cloud Platform IAM auth as the vault authentication mechanism (env: GCP_AUTH)
   -gcp-auth-mount string
-        the vault mount where gcp auth takes place (env: GCP_AUTH_MOUNT) (default "gcp")
+      the vault mount where gcp auth takes place (env: GCP_AUTH_MOUNT) (default "gcp")
   -gcp-svc-acct string
-        the name of the service account authenticating (env: GCP_SVC_ACCT)
+      the name of the service account authenticating (env: GCP_SVC_ACCT)
   -iam-auth
-        select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)
+      (legacy) select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)
   -iam-auth-mount string
-        the vault mount where iam auth takes place (env: IAM_AUTH_MOUNT) (default "aws")
+      the vault mount where iam auth takes place (env: IAM_AUTH_MOUNT) (default "aws")
   -infinite-auth
-        infinitely attempt to authenticate (env: INFINITE_AUTH)
+      infinitely attempt to authenticate (env: INFINITE_AUTH)
   -k8s-auth
-        select kubernetes vault auth as the vault authentication mechanism (env: K8S_AUTH)
+      select kubernetes vault auth as the vault authentication mechanism (env: K8S_AUTH)
   -k8s-auth-mount string
-        the vault mount where k8s auth takes place (env: K8S_AUTH_MOUNT, note: will infer via k8s metadata api if left unset) (default "kubernetes")
+      the vault mount where k8s auth takes place (env: K8S_AUTH_MOUNT, note: will infer via k8s metadata api if left unset) (default "kubernetes")
   -k8s-token-path string
-        kubernetes service account jtw token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
+      kubernetes service account jtw token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
+  -max-auth-duration int
+      the value, in seconds, for which DAYTONA should attempt to renew a token before exiting (env: MAX_AUTH_DURATION) (default 300)
+  -renewal-increment int
+      the value, in seconds, to which the token's ttl should be renewed (env: RENEWAL_INCREMENT) (default 43200)
   -renewal-interval int
-        how often to check the token's ttl and potentially renew it (env: RENEWAL_INTERVAL) (default 300)
+      how often to check the token's ttl and potentially renew it (env: RENEWAL_INTERVAL) (default 300)
   -renewal-threshold int
-        the threshold remaining in the vault token, in seconds, after which it should be renewed (env: RENEWAL_THRESHOLD) (default 43200)
+      the threshold remaining in the vault token, in seconds, after which it should be renewed (env: RENEWAL_THRESHOLD) (default 7200)
   -secret-env
-        write secrets to environment variables (env: SECRET_ENV)
+      write secrets to environment variables (env: SECRET_ENV)
   -secret-path string
-        the full file path to store the JSON blob of the fetched secrets (env: SECRET_PATH)
+      the full file path to store the JSON blob of the fetched secrets (env: SECRET_PATH)
   -token-path string
-        a full file path where a token will be read from/written to (env: TOKEN_PATH) (default "~/.vault-token")
+      a full file path where a token will be read from/written to (env: TOKEN_PATH) (default "~/.vault-token")
   -vault-auth-role string
-        the name of the role used for auth. used with either auth method (env: VAULT_AUTH_ROLE, note: will infer to k8s sa account name if left blank)
-  -auth-mount string
-        the _FULL_ path to a vault auth mount location (this differs from the other auth mount flags) (env: AUTH_MOUNT) (default depends on environment)
+      the name of the role used for auth. used with either auth method (env: VAULT_AUTH_ROLE, note: will infer to k8s sa account name if left blank)
 ```
+
+#### Deployment
+
+DAYTONA is not deployed to any public image registry as we'd like to assume you're comfortable with deploying this somewhere that you trust.
+
+Building a docker image:
+```
+make image
+```
+
+Use the `REGISTRY` environment variable to define where you'd like the image to be pushed:
+
+```
+REGISTRY=gcr.io/supa-fast-c432 make push-image
+```
+
+Or, you can simply deploy the binary. It can be built via:
+
+```
+make build
+```
+
+# License
+
+Copyright 2019 GM Cruise LLC
+
+Licensed under the [Apache License Version 2.0](LICENSE) (the "License");
+you may not use this project except in compliance with the License.
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+# Contributions
+
+Contributions are welcome! Please see the agreement for contributions in
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+Commits must be made with a Sign-off (`git commit -s`) certifying that you
+agree to the provisions in [CONTRIBUTING.md](CONTRIBUTING.md).

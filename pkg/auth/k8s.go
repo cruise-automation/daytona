@@ -13,7 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-package main
+package auth
 
 import (
 	"bytes"
@@ -24,6 +24,7 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/briankassouf/jose/jws"
+	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -31,50 +32,51 @@ import (
 type K8SService struct{}
 
 // Auth is used to authenticate to an external service
-func (k *K8SService) Auth(client *api.Client) (string, error) {
-	log.Println("attempting kubernetes auth..")
-	if config.k8sTokenPath == "" {
+func (k *K8SService) Auth(client *api.Client, config cfg.Config) (string, error) {
+	log.Println("Attempting kubernetes auth..")
+	if config.K8STokenPath == "" {
 		return "", fmt.Errorf("kubernetes auth token path is mssing")
 	}
 
-	data, err := ioutil.ReadFile(config.k8sTokenPath)
+	data, err := ioutil.ReadFile(config.K8STokenPath)
 	if err != nil {
 		return "", fmt.Errorf("could not read JWT from file %s", err.Error())
 	}
 	jwt := string(bytes.TrimSpace(data))
 	loginData := map[string]interface{}{
-		"role": config.vaultAuthRoleName,
+		"role": config.VaultAuthRoleName,
 		"jwt":  jwt,
 	}
-	return fetchVaultToken(client, loginData)
+	return fetchVaultToken(client, config, loginData)
 }
 
 // InferK8SConfig attempts to replace default configuration parameters on K8S with ones infered from the k8s environment
-func InferK8SConfig() {
-	if config.vaultAuthRoleName == "" {
-		saName, err := InferVaultAuthRoleName()
+func InferK8SConfig(config *cfg.Config) {
+	log.Println("Attempting to automatically infer some k8s configuration data")
+	if config.VaultAuthRoleName == "" {
+		saName, err := inferVaultAuthRoleName(config)
 		if err != nil {
 			log.Printf("Unable to infer SA Name: %v\n", err)
 		} else {
-			config.vaultAuthRoleName = saName
+			config.VaultAuthRoleName = saName
 		}
 	}
 
 	// Check for default value
-	if config.k8sAuthMount == "kubernetes" {
-		vaultAuthMount, err := InferVaultAuthMount()
+	if config.K8SAuthMount == "kubernetes" {
+		vaultAuthMount, err := inferVaultAuthMount()
 		if err != nil {
 			log.Printf("Unable to infer K8S Vault Auth Mount: %v\n", err)
 		} else {
-			config.k8sAuthMount = vaultAuthMount
+			config.K8SAuthMount = vaultAuthMount
 		}
 	}
 }
 
-// InferVaultAuthRoleName figures out the current k8s service account name, and returns it.
+// inferVaultAuthRoleName figures out the current k8s service account name, and returns it.
 // This can be assumed to match a a vault role if configured properly.
-func InferVaultAuthRoleName() (string, error) {
-	data, err := ioutil.ReadFile(config.k8sTokenPath)
+func inferVaultAuthRoleName(config *cfg.Config) (string, error) {
+	data, err := ioutil.ReadFile(config.K8STokenPath)
 	if err != nil {
 		return "", fmt.Errorf("could not read JWT from file %s", err.Error())
 	}
@@ -95,8 +97,8 @@ func InferVaultAuthRoleName() (string, error) {
 	return saName, nil
 }
 
-// InferVaultAuthMount attempts to figure out where the auth path for the current k8s cluster is in vault, and return it
-func InferVaultAuthMount() (string, error) {
+// inferVaultAuthMount attempts to figure out where the auth path for the current k8s cluster is in vault, and return it
+func inferVaultAuthMount() (string, error) {
 	clusterName, err := metadata.InstanceAttributeValue("cluster-name")
 
 	return fmt.Sprintf("kubernetes-gcp-%s", clusterName), err

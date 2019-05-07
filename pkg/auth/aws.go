@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package main
+package auth
 
 import (
 	"encoding/base64"
@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -32,7 +33,7 @@ import (
 type AWSService struct{}
 
 // Auth is used to authenticate to an external service
-func (a *AWSService) Auth(client *api.Client) (string, error) {
+func (a *AWSService) Auth(client *api.Client, config cfg.Config) (string, error) {
 	log.Println("attempting aws iam auth..")
 	loginData := make(map[string]interface{})
 	stsSession, err := session.NewSession(&aws.Config{
@@ -61,7 +62,7 @@ func (a *AWSService) Auth(client *api.Client) (string, error) {
 	loginData["iam_request_url"] = base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String()))
 	loginData["iam_request_headers"] = base64.StdEncoding.EncodeToString(headersJSON)
 	loginData["iam_request_body"] = base64.StdEncoding.EncodeToString(requestBody)
-	loginData["role"] = config.vaultAuthRoleName
+	loginData["role"] = config.VaultAuthRoleName
 
-	return fetchVaultToken(client, loginData)
+	return fetchVaultToken(client, config, loginData)
 }

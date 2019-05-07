@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package main
+package secrets
 
 import (
 	"encoding/json"
@@ -26,17 +26,22 @@ import (
 	"path"
 	"strings"
 
+	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
 )
 
-func secretFetcher(client *api.Client) {
+const defaultKeyName = "value"
+const secretLocationPrefix = "DAYTONA_SECRET_DESTINATION_"
+
+// SecretFetcher is responsible for fetching sercrets..
+func SecretFetcher(client *api.Client, config cfg.Config) {
 	locations := prefixSecretLocationDefined()
-	if config.secretPayloadPath == "" && !config.secretEnv && len(locations) == 0 {
+	if config.SecretPayloadPath == "" && !config.SecretEnv && len(locations) == 0 {
 		log.Println("No secret output method was configured, will not attempt to retrieve secrets")
 		return
 	}
 
-	log.Println("starting secret fetch")
+	log.Println("Starting secret fetch")
 	secrets := make(map[string]string)
 
 	envs := os.Environ()
@@ -72,8 +77,8 @@ func secretFetcher(client *api.Client) {
 	}
 
 	// Write all secrets to a configured json file
-	if config.secretPayloadPath != "" {
-		err := writeJSONSecrets(secrets, config.secretPayloadPath)
+	if config.SecretPayloadPath != "" {
+		err := writeJSONSecrets(secrets, config.SecretPayloadPath)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -88,7 +93,7 @@ func secretFetcher(client *api.Client) {
 	}
 
 	// Export secret environment variables if configured, and we are acting as a stub entrypoint for a container
-	if config.secretEnv {
+	if config.SecretEnv {
 		err := setEnvSecrets(secrets)
 		if err != nil {
 			log.Fatalln(err)
@@ -108,7 +113,7 @@ func listSecrets(client *api.Client, secretPath string) ([]string, error) {
 	if list == nil || len(list.Data) == 0 {
 		return nil, fmt.Errorf("no secrets found under: %s", secretPath)
 	}
-	log.Println("starting iteration on", secretPath)
+	log.Println("Starting iteration on", secretPath)
 	// list.Data is like: map[string]interface {}{"keys":[]interface {}{"API_KEY", "APPLICATION_KEY", "DB_PASS"}}
 	keys, ok := list.Data["keys"].([]interface{})
 	if !ok {

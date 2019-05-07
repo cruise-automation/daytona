@@ -13,7 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-package main
+package auth
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"log"
 	"time"
 
+	cfg "github.com/cruise-automation/daytona/pkg/config"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/api"
@@ -30,26 +31,26 @@ import (
 	iam "google.golang.org/api/iam/v1"
 )
 
+// GCPService is an external service that vault can authenticate requests against
 type GCPService struct{}
 
 // Auth is used to authenticate to the service
-func (g *GCPService) Auth(client *api.Client) (string, error) {
+func (g *GCPService) Auth(client *api.Client, config cfg.Config) (string, error) {
 	log.Println("attempting gcp iam auth..")
-	if config.gcpServiceAccount == "" {
+	if config.GCPServiceAccount == "" {
 		return "", errors.New("-gcp-svc-acct is missing")
 	}
 
-	loginToken, err := g.getGCPSignedJwt(config.vaultAuthRoleName, config.gcpServiceAccount, "")
+	loginToken, err := g.getGCPSignedJwt(config.VaultAuthRoleName, config.GCPServiceAccount, "")
 	if err != nil {
-		fmt.Println(err)
 		return "", err
 	}
 
 	loginData := map[string]interface{}{
-		"role": config.vaultAuthRoleName,
+		"role": config.VaultAuthRoleName,
 		"jwt":  loginToken,
 	}
-	return fetchVaultToken(client, loginData)
+	return fetchVaultToken(client, config, loginData)
 }
 
 func (g *GCPService) getGCPSignedJwt(role, serviceAccount, project string) (string, error) {
