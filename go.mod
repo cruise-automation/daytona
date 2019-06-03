@@ -1,4 +1,4 @@
-module github.robot.car/cruise/daytona
+module github.com/cruise-automation/daytona
 
 require (
 	cloud.google.com/go v0.31.0
