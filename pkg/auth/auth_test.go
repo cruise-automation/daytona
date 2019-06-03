@@ -30,8 +30,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-const testToken = "s.iyNUhq8Ov4hIAx6snw5mB2nL"
-const testTokenLookupPayload = `
+// nolint: gosec
+const (
+	testToken              = "s.iyNUhq8Ov4hIAx6snw5mB2nL"
+	testTokenLookupPayload = `
 {
   "data": {
 	"accessor": "8609694a-cdbc-db9b-d345-e782dbb562ed",
@@ -61,8 +63,7 @@ const testTokenLookupPayload = `
   }
 }
 `
-
-const testAuthResponse = `
+	testAuthResponse = `
 {
 	"auth": {
 	  "client_token": "b.AAAAAQL_tyer_gNuQqvQYPVQgsNxjap_YW1NB2m4CDHHadQo7rF2XLFGdw-NJplAZNKbfloOvifrbpRCGdgG1taTqmC7D-a_qftN64zeL10SmNwEoDTiPzC_1aS1KExbtVftU3Sx16cBVqaynwsYRDfVnfTAffE",
@@ -83,6 +84,7 @@ const testAuthResponse = `
 	}
   }
 `
+)
 
 func TestAuthPanic(t *testing.T) {
 	var config cfg.Config

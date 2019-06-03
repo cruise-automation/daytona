@@ -1,0 +1,15 @@
+run:
+  deadline: 1m
+  modules-download-mode: vendor
+  tests: true
+
+linters:
+  enable-all: true
+  disable:
+    - lll
+
+linters-settings:
+  gocyclo:
+    min-complexity: 12
+  gofmt:
+    simplify: true
