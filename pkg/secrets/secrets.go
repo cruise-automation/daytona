@@ -17,6 +17,7 @@
 package secrets
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -44,6 +45,9 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	log.Println("Starting secret fetch")
 	secrets := make(map[string]string)
 
+	ctx := context.Background()
+	parallelReader := NewParallelReader(ctx, client, config.NumSecretReadWorkers)
+
 	envs := os.Environ()
 	// Find where all our secret keys are in vault
 	for _, v := range envs {
@@ -56,19 +60,31 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 
 		// Single secret
 		if strings.HasPrefix(envKey, "VAULT_SECRET_") {
-			err := addSecrets(client, secrets, secretPath)
+			parallelReader.AsyncRequestKeyPath(secretPath)
+			secretResult := parallelReader.ReadSecretResult()
+
+			err := addSecrets(client, secretResult, secrets)
 			if err != nil {
 				log.Fatalln(err)
 			}
 		}
+
 		// Path containing multiple secrets
 		if strings.HasPrefix(envKey, "VAULT_SECRETS_") {
 			paths, err := listSecrets(client, secretPath)
 			if err != nil {
 				log.Fatalln(err)
 			}
+
+			// Request secrets in parallel (using up to N workers)
 			for _, path := range paths {
-				err := addSecrets(client, secrets, path)
+				parallelReader.AsyncRequestKeyPath(path)
+			}
+
+			// Iterate until all secrets were returned
+			for range paths {
+				secretResult := parallelReader.ReadSecretResult()
+				err := addSecrets(client, secretResult, secrets)
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -181,10 +197,12 @@ func addSecret(secrets map[string]string, k string, v interface{}) error {
 	return nil
 }
 
-func addSecrets(client *api.Client, secrets map[string]string, keyPath string) error {
-	_, keyName := path.Split(keyPath)
+func addSecrets(client *api.Client, secretResult *SecretResult, secrets map[string]string) error {
+	keyPath := secretResult.KeyPath
+	secret := secretResult.Secret
+	err := secretResult.Err
 
-	secret, err := client.Logical().Read(keyPath)
+	_, keyName := path.Split(keyPath)
 	if err != nil {
 		log.Fatalf("Failed retrieving secret %s: %s\n", keyPath, err)
 	}

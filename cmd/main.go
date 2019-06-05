@@ -13,6 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+
 package main
 
 import (
@@ -107,6 +108,19 @@ func init() {
 	flag.StringVar(&config.AWSAuthMount, "iam-auth-mount", cfg.BuildDefaultConfigItem("IAM_AUTH_MOUNT", "aws"), "the vault mount where iam auth takes place (env: IAM_AUTH_MOUNT)")
 	flag.StringVar(&config.GCPAuthMount, "gcp-auth-mount", cfg.BuildDefaultConfigItem("GCP_AUTH_MOUNT", "gcp"), "the vault mount where gcp auth takes place (env: GCP_AUTH_MOUNT)")
 	flag.StringVar(&config.AuthMount, "auth-mount", cfg.BuildDefaultConfigItem("AUTH_MOUNT", ""), "")
+	flag.IntVar(&config.NumSecretReadWorkers, "num-secret-read-workers", func() int {
+		b, err := strconv.ParseInt(cfg.BuildDefaultConfigItem("NUM_SECRET_READ_WORKERS", "1"), 10, 64)
+		if err != nil {
+			return 1
+		}
+		if b < 1 {
+			b = 1
+		}
+		if b > 5 {
+			b = 5
+		}
+		return int(b)
+	}(), "how many workers to run to read secrets in parallel (env: NUM_SECRET_READ_WORKERS) (Max: 5)")
 }
 
 func main() {

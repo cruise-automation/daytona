@@ -64,6 +64,7 @@ func TestSecretPath(t *testing.T) {
 	os.Setenv("VAULT_SECRET_APPLICATIONA", "secret/applicationA")
 	defer os.Unsetenv("VAULT_SECRET_APPLICATIONA")
 	config.SecretPayloadPath = file.Name()
+	config.NumSecretReadWorkers = 3
 	SecretFetcher(client, config)
 
 	secrets := make(map[string]string)
