@@ -1,17 +1,17 @@
 /*
-   Copyright 2019 GM Cruise LLC
+Copyright 2019 GM Cruise LLC
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 package auth
 
@@ -50,7 +50,7 @@ func (k *K8SService) Auth(client *api.Client, config cfg.Config) (string, error)
 	return fetchVaultToken(client, config, loginData)
 }
 
-// InferK8SConfig attempts to replace default configuration parameters on K8S with ones infered from the k8s environment
+// InferK8SConfig attempts to replace default configuration parameters on K8S with ones inferred from the k8s environment
 func InferK8SConfig(config *cfg.Config) {
 	log.Println("Attempting to automatically infer some k8s configuration data")
 	if config.VaultAuthRoleName == "" {
