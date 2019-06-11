@@ -43,7 +43,7 @@ The following authentication methods are supported:
  
  Any unique value can be appended to `VAULT_SECRET_` in order to provide the ability to supply multiple secret paths. e.g. `VAULT_SECRETS_APPLICATION=secret/path/to/my/application/directory`, `VAULT_SECRETS_COMMON=secret/path/common`, `VAULT_SECRET_1=secret/path/to/individual/secret`.
 
-If a secret in Vault has a corresponding environment variable pointed at a file location prefixed with `DAYTONA_SECRET_DESTINATION` then the secret is written to that location instead of the default destination. For example, if `VAULT_SECRET_API_KEY=secret/path/to/API_KEY` and `DAYTONA_SECRET_DESTINATION_API_KEY='/etc/api.conf'` are defined then the key is written to /etc/api.conf instead of the default location. Other keys are written at the normal location as defined by their `VAULT_SECRET` value. For convenience, `DAYTONA_SECRET_DESTINATION_API_KEY` will work if the Vault key is `API-KEY` or `API_KEY`. Periods are ignored in the Vault key name.
+If a secret in Vault has a corresponding environment variable pointed at a file location prefixed with `DAYTONA_SECRET_DESTINATION` then the secret is written to that location instead of the default destination. For example, if `VAULT_SECRET_API_KEY=secret/path/to/API_KEY` and `DAYTONA_SECRET_DESTINATION_API_KEY='/etc/api.conf'` are defined then the key is written to /etc/api.conf instead of the default location. Other keys are written at the normal location as defined by their `VAULT_SECRET` value.
 
 #### Outputs
 
