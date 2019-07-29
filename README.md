@@ -1,6 +1,6 @@
 ![DAYTONA](project/images/logo.png)
 
-This is intended to be a lighter, alternative, implementation of the Vault client CLI primarily for services and containers. Its core features are the abilty to automate authentication, fetching of secrets, and automated token renewal.
+This is intended to be a lighter, alternative, implementation of the Vault client CLI primarily for services and containers. Its core features are the ability to automate authentication, fetching of secrets, and automated token renewal.
 
 Previously authentication to, and secret retrevial from, Vault via a server or container was a delicate balance of shell scripts or potentially lengthy http implementations, similar to:
 
