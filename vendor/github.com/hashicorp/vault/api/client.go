@@ -138,6 +138,7 @@ func DefaultConfig() *Config {
 		config.Error = err
 		return config
 	}
+
 	// Ensure redirects are not automatically followed
 	// Note that this is sane for the API client as it has its own
 	// redirect handling logic (and thus also for command/meta),

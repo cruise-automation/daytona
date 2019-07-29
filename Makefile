@@ -34,7 +34,7 @@ lint:
 	gofmt -d -l ${GOFILES}
 
 build:
-	go build -a -o daytona cmd/main.go
+	go build -a -o daytona cmd/daytona/main.go
 
 image: check
 	docker build -t daytona:${VERSION} .
