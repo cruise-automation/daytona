@@ -32,6 +32,12 @@ type Config struct {
 	InfiniteAuth      bool
 	MaximumAuthRetry  int64
 	AuthMount         string
+	PkiIssuer         string
+	PkiRole           string
+	PkiDomains        string
+	PkiPrivateKey     string
+	PkiCertificate    string
+	PkiUseCaChain     bool
 }
 
 // BuildDefaultConfigItem uses the following operation: ENV --> arg
@@ -68,6 +74,9 @@ func (c *Config) ValidateConfig() error {
 		if f, err := os.Stat(c.SecretPayloadPath); err == nil && f.IsDir() {
 			return errors.New("The secret path you provided is a directory, please supply a full file path")
 		}
+	}
+	if (c.PkiIssuer != "" || c.PkiRole != "" || c.PkiDomains != "" || c.PkiPrivateKey != "" || c.PkiCertificate != "") && (c.PkiIssuer == "" || c.PkiRole == "" || c.PkiDomains == "" || c.PkiPrivateKey == "" || c.PkiCertificate == "") {
+		return errors.New("One or more required PKI signing values are missing. PKI_ISSUER: " + c.PkiIssuer + ", PKI_ROLE: " + c.PkiRole + ", PKI_DOMAINS: " + c.PkiDomains + ", PKI_PRIVKEY: " + c.PkiPrivateKey + ", PKI_CERT: " + c.PkiCertificate)
 	}
 	return nil
 }

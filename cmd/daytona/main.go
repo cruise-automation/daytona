@@ -28,6 +28,7 @@ import (
 
 	"github.com/cruise-automation/daytona/pkg/auth"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
+	"github.com/cruise-automation/daytona/pkg/pki"
 	"github.com/cruise-automation/daytona/pkg/secrets"
 	"github.com/hashicorp/vault/api"
 	homedir "github.com/mitchellh/go-homedir"
@@ -35,7 +36,7 @@ import (
 
 var config cfg.Config
 
-const version = "1.0.0"
+const version = "1.0.1"
 
 func init() {
 	flag.StringVar(&config.VaultAddress, "address", "", "Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied")
@@ -119,6 +120,15 @@ func init() {
 		}
 		return int(b)
 	}(), "how many workers to run to read secrets in parallel (env: WORKERS) (Max: 5)")
+	flag.StringVar(&config.PkiIssuer, "pki-issuer", cfg.BuildDefaultConfigItem("PKI_ISSUER", ""), "the name of the PKI CA backend to use when requesting a certificate (env: PKI_ISSUER)")
+	flag.StringVar(&config.PkiRole, "pki-role", cfg.BuildDefaultConfigItem("PKI_ROLE", ""), "the name of the PKI role to use when requesting a certificate (env: PKI_ROLE)")
+	flag.StringVar(&config.PkiDomains, "pki-domains", cfg.BuildDefaultConfigItem("PKI_DOMAINS", ""), "a comma-separated list of domain names to use when requesting a certificate (env: PKI_DOMAINS)")
+	flag.StringVar(&config.PkiPrivateKey, "pki-privkey", cfg.BuildDefaultConfigItem("PKI_PRIVKEY", ""), "a full file path where the vault-issued private key will be written to (env: PKI_PRIVKEY)")
+	flag.StringVar(&config.PkiCertificate, "pki-cert", cfg.BuildDefaultConfigItem("PKI_CERT", ""), "a full file path where the vault-issued x509 certificate will be written to (env: PKI_CERT)")
+	flag.BoolVar(&config.PkiUseCaChain, "pki-use-ca-chain", func() bool {
+		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("PKI_USE_CA_CHAIN", "false"))
+		return err == nil && b
+	}(), "if set, retrieve the CA chain and include it in the certificate file output (env: PKI_USE_CA_CHAIN)")
 }
 
 func main() {
@@ -169,6 +179,8 @@ func main() {
 	}
 
 	secrets.SecretFetcher(client, config)
+	pki.CertFetcher(client, config)
+
 	if config.AutoRenew {
 		// if you send USR1, we'll re-fetch secrets
 		sigChan := make(chan os.Signal, 1)
@@ -181,6 +193,7 @@ func main() {
 				switch s {
 				case syscall.SIGUSR1:
 					secrets.SecretFetcher(client, config)
+					pki.CertFetcher(client, config)
 				}
 			}
 		}()
