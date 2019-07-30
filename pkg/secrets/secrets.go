@@ -46,7 +46,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	secrets := make(map[string]string)
 
 	ctx := context.Background()
-	parallelReader := NewParallelReader(ctx, client, config.NumSecretReadWorkers)
+	parallelReader := NewParallelReader(ctx, client.Logical(), config.NumSecretReadWorkers)
 
 	envs := os.Environ()
 	// Find where all our secret keys are in vault

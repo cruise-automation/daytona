@@ -22,6 +22,11 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+// LogicalClient is the minimum interface needed to read secrets from the API
+type LogicalClient interface {
+	Read(string) (*api.Secret, error)
+}
+
 // SecretResult is the output of reading a secret
 type SecretResult struct {
 	KeyPath string
@@ -34,20 +39,20 @@ type ParallelReader struct {
 	ctx        context.Context
 	cancelFunc func()
 
-	client        *api.Client
+	logicalClient LogicalClient
 	keyPathInChan chan string
 	secretOutChan chan *SecretResult
 }
 
 // NewParallelReader returns an instance of ParallelReader and starts n workers
-func NewParallelReader(ctx context.Context, client *api.Client, numWorkers int) *ParallelReader {
+func NewParallelReader(ctx context.Context, logicalClient LogicalClient, numWorkers int) *ParallelReader {
 	ctx, cancelFunc := context.WithCancel(ctx)
 
 	parallelReader := &ParallelReader{
 		ctx:        ctx,
 		cancelFunc: cancelFunc,
 
-		client: client,
+		logicalClient: logicalClient,
 
 		keyPathInChan: make(chan string, 100),
 		secretOutChan: make(chan *SecretResult, 100),
@@ -85,7 +90,7 @@ func (pr *ParallelReader) worker() {
 		case <-pr.ctx.Done():
 			return
 		case keyPath := <-pr.keyPathInChan:
-			secret, err := pr.client.Logical().Read(keyPath)
+			secret, err := pr.logicalClient.Read(keyPath)
 			pr.secretOutChan <- &SecretResult{
 				KeyPath: keyPath,
 				Secret:  secret,
