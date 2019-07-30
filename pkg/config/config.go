@@ -10,28 +10,28 @@ const authPathFmtString = "auth/%s/login"
 
 //Config represents an application configurations
 type Config struct {
-	VaultAddress         string
-	TokenPath            string
-	K8STokenPath         string
-	K8SAuth              bool
-	K8SAuthMount         string
-	AWSAuth              bool
-	AWSAuthMount         string
-	GCPAuth              bool
-	GCPAuthMount         string
-	GCPServiceAccount    string
-	VaultAuthRoleName    string
-	RenewalThreshold     int64
-	RenewalIncrement     int64
-	RenewalInterval      int64
-	SecretPayloadPath    string
-	SecretEnv            bool
-	NumSecretReadWorkers int
-	AutoRenew            bool
-	Entrypoint           bool
-	InfiniteAuth         bool
-	MaximumAuthRetry     int64
-	AuthMount            string
+	VaultAddress      string
+	TokenPath         string
+	K8STokenPath      string
+	K8SAuth           bool
+	K8SAuthMount      string
+	AWSAuth           bool
+	AWSAuthMount      string
+	GCPAuth           bool
+	GCPAuthMount      string
+	GCPServiceAccount string
+	VaultAuthRoleName string
+	RenewalThreshold  int64
+	RenewalIncrement  int64
+	RenewalInterval   int64
+	SecretPayloadPath string
+	SecretEnv         bool
+	Workers           int
+	AutoRenew         bool
+	Entrypoint        bool
+	InfiniteAuth      bool
+	MaximumAuthRetry  int64
+	AuthMount         string
 }
 
 // BuildDefaultConfigItem uses the following operation: ENV --> arg
