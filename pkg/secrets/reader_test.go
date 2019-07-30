@@ -19,7 +19,6 @@ package secrets
 import (
 	"context"
 	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -96,39 +95,55 @@ func testParallelReadIteration(t *testing.T, testParameters TestParameters) {
 		parallelReader.AsyncRequestKeyPath(fmt.Sprintf("fake/path/key%d", i))
 	}
 
-	secrets := make([]*SecretResult, 0)
+	secretResults := make(map[string]*SecretResult)
 	for i := 0; i < testParameters.NumKeys; i++ {
-		secrets = append(secrets, parallelReader.ReadSecretResult())
+		secretResult := parallelReader.ReadSecretResult()
+		secretResults[secretResult.KeyPath] = secretResult
 	}
 
-	assert.Equal(t, len(secrets), testParameters.NumKeys)
-	assert.ElementsMatch(t, secrets, expectedSecretResults)
+	assert.Equal(t, len(secretResults), testParameters.NumKeys)
+	for expectedKeyPath, expectedSecretResult := range expectedSecretResults {
+		secretResult, exists := secretResults[expectedKeyPath]
+		assert.Equal(t, true, exists)
+
+		assert.Equal(t, expectedSecretResult.KeyPath, secretResult.KeyPath)
+		assert.Equal(t, expectedSecretResult.Err, secretResult.Err)
+
+		assert.Equal(t, expectedSecretResult.Secret.RequestID, secretResult.Secret.RequestID)
+		assert.Equal(t, expectedSecretResult.Secret.LeaseID, secretResult.Secret.LeaseID)
+		assert.Equal(t, expectedSecretResult.Secret.LeaseDuration, secretResult.Secret.LeaseDuration)
+		assert.Equal(t, expectedSecretResult.Secret.Renewable, secretResult.Secret.Renewable)
+		assert.Equal(t, expectedSecretResult.Secret.Data, secretResult.Secret.Data)
+		assert.Equal(t, expectedSecretResult.Secret.Warnings, secretResult.Secret.Warnings)
+	}
 }
 
-func getExpectedSecretResults(testParameters TestParameters) []*SecretResult {
-	secretResults := make([]*SecretResult, 0)
+func getExpectedSecretResults(testParameters TestParameters) map[string]*SecretResult {
+	secretResults := make(map[string]*SecretResult)
 	for i := 0; i < testParameters.NumKeys; i++ {
+		keyPath := fmt.Sprintf("fake/path/key%d", i)
+
 		secret := &api.Secret{
-			RequestID: fmt.Sprintf("abc%d", i),
+			RequestID: keyPath,
 
 			LeaseID:       "abc",
 			LeaseDuration: 600,
 			Renewable:     true,
 
 			Data: map[string]interface{}{
-				"key": fmt.Sprintf("def%d", i),
+				"key": keyPath,
 			},
 
 			Warnings: []string{},
 		}
 
 		secretResult := &SecretResult{
-			KeyPath: fmt.Sprintf("fake/path/key%d", i),
+			KeyPath: keyPath,
 			Secret:  secret,
 			Err:     testParameters.Err,
 		}
 
-		secretResults = append(secretResults, secretResult)
+		secretResults[secretResult.KeyPath] = secretResult
 	}
 
 	return secretResults
@@ -136,28 +151,20 @@ func getExpectedSecretResults(testParameters TestParameters) []*SecretResult {
 
 // MockLogicalClient is an implementation that satisfies LogicalClient interface
 type MockLogicalClient struct {
-	iteration int
-	mutex     sync.Mutex
-
 	FakeErr error
 }
 
 // Read returns a mock secret response for a given path
 func (m *MockLogicalClient) Read(path string) (*api.Secret, error) {
-	m.mutex.Lock()
-	iteration := m.iteration
-	m.iteration++
-	m.mutex.Unlock()
-
 	return &api.Secret{
-		RequestID: fmt.Sprintf("abc%d", iteration),
+		RequestID: path,
 
 		LeaseID:       "abc",
 		LeaseDuration: 600,
 		Renewable:     true,
 
 		Data: map[string]interface{}{
-			"key": fmt.Sprintf("def%d", iteration),
+			"key": path,
 		},
 
 		Warnings: []string{},
