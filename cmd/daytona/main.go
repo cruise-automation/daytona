@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package main
 
 import (
@@ -107,6 +108,17 @@ func init() {
 	flag.StringVar(&config.AWSAuthMount, "iam-auth-mount", cfg.BuildDefaultConfigItem("IAM_AUTH_MOUNT", "aws"), "the vault mount where iam auth takes place (env: IAM_AUTH_MOUNT)")
 	flag.StringVar(&config.GCPAuthMount, "gcp-auth-mount", cfg.BuildDefaultConfigItem("GCP_AUTH_MOUNT", "gcp"), "the vault mount where gcp auth takes place (env: GCP_AUTH_MOUNT)")
 	flag.StringVar(&config.AuthMount, "auth-mount", cfg.BuildDefaultConfigItem("AUTH_MOUNT", ""), "")
+	flag.IntVar(&config.Workers, "workers", func() int {
+		b, err := strconv.ParseInt(cfg.BuildDefaultConfigItem("WORKERS", "1"), 10, 64)
+		if err != nil {
+			log.Fatal("WORKERS environment variable must be a valid value")
+		}
+
+		if b < 1 || b > 5 {
+			log.Fatal("-workers must be greater than zero and less than 5")
+		}
+		return int(b)
+	}(), "how many workers to run to read secrets in parallel (env: WORKERS) (Max: 5)")
 }
 
 func main() {

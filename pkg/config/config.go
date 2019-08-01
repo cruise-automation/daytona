@@ -26,6 +26,7 @@ type Config struct {
 	RenewalInterval   int64
 	SecretPayloadPath string
 	SecretEnv         bool
+	Workers           int
 	AutoRenew         bool
 	Entrypoint        bool
 	InfiniteAuth      bool
