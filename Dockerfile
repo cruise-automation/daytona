@@ -14,14 +14,14 @@
 ARG GO_VERSION=1.12
 FROM golang:${GO_VERSION}-alpine AS builder
 ENV GOFLAGS -mod=vendor
-RUN apk --update add ca-certificates
+RUN apk --update add ca-certificates make
 WORKDIR /go/src/github.com/cruise-automation/daytona
 COPY . .
 RUN \
   CGO_ENABLED=0 \
   GOOS=linux \
   GOARCH=amd64 \
-  go build -a -o daytona cmd/main.go
+  make build
 
 FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
