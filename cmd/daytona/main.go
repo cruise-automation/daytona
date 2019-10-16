@@ -189,6 +189,9 @@ func main() {
 
 	if config.Entrypoint {
 		args := flag.Args()
+		if len(args) == 0 {
+			log.Fatalln("No arguments detected with use of -entrypoint")
+		}
 		log.Println("Will exec: ", args)
 		binary, err := exec.LookPath(args[0])
 		if err != nil {
