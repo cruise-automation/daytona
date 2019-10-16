@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TAG=$(VERSION:v%=%) # drop the v-prefix for docker images, per convention
 PACKAGES=$(shell go list ./... | grep -v /vendor/)

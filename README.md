@@ -40,7 +40,7 @@ The following authentication methods are supported:
 `daytona` gives you the ability to pre-fetch secrets upon launch and store them either in environment variables or a specified JSON file after retrievial. The desired secrets are specified in one of two ways:
  * By providing environment variables prefixed with `VAULT_SECRET_` + the Vault path where the secret exists in Vault that can be _read_. This will fetch an individual secret in Vault.
  * By providing environment variables prefixed with `VAULT_SECRETS_` + the Vault path where the secrets exist in Vault that can be _listed_ and then _read_. This will fetch all secrets within the given Vault directory.
- 
+
  Any unique value can be appended to `VAULT_SECRET_` in order to provide the ability to supply multiple secret paths. e.g. `VAULT_SECRETS_APPLICATION=secret/path/to/my/application/directory`, `VAULT_SECRETS_COMMON=secret/path/common`, `VAULT_SECRET_1=secret/path/to/individual/secret`.
 
 If a secret in Vault has a corresponding environment variable pointed at a file location prefixed with `DAYTONA_SECRET_DESTINATION` then the secret is written to that location instead of the default destination. For example, if `VAULT_SECRET_API_KEY=secret/path/to/API_KEY` and `DAYTONA_SECRET_DESTINATION_API_KEY='/etc/api.conf'` are defined then the key is written to /etc/api.conf instead of the default location. Other keys are written at the normal location as defined by their `VAULT_SECRET` value.
@@ -69,7 +69,7 @@ If `-secret-env` is supplied at runtime, the above example would be written to a
 }
 ```
 
-If data within a secret is stored as multiple key-values, which is the **`non-preferred`** format, then the secret data will be stored as a combination of `SECRETNAME_DATAKEYNAME=value`. For example, if the Vault secret `secret/path/to/database` has multiple key-values: 
+If data within a secret is stored as multiple key-values, which is the **`non-preferred`** format, then the secret data will be stored as a combination of `SECRETNAME_DATAKEYNAME=value`. For example, if the Vault secret `secret/path/to/database` has multiple key-values:
 
 ```
 {
@@ -285,6 +285,22 @@ as a representation of the following vault data:
 }
 ```
 
+**AWS IAM Example - As a container entrypoint, for requesting a PKI certificate**:
+
+In a `Dockerfile`:
+```
+ENTRYPOINT [ "./daytona", "-iam-auth", "-vault-auth-role", "vault-role-name", "-pki-issuer", "pki-backend", "-pki-role", "my-role", "-pki-domains", "www.example.com", "-pki-cert", "/etc/cert.pem", "-pki-privkey", "/etc/key.pem", "-pki-use-ca-chain", -entrypoint", "--" ]
+```
+
+Given a PKI backend issuer role located at `pki-backend/issue/my-role`, and `update` permissions granted to `vault-role-name` on this path, Daytona will request a certificate for `www.example.com` from Vault, placing the certificate (with CA chain) and private key in `/etc`.
+
+N.b.:
+* The role should have `www.example.com` configured in its `allowed_domains`
+* Before setting `-pki-use-ca-chain`, verify whether the PKI backend in question has the full chain at `<pki-backend>/ca_chain`
+  - Some Vault PKI backends may have the full chain (including the root), while others may only have the intermediates.
+  - Services using this cert/chain may refuse to accept a cert with the root in the chain - use with caution.
+
+
 **GCP GCE Example - Writing to a File**:
 
 Assume you have the following Vault GCP Auth Role:
@@ -353,7 +369,7 @@ Usage
 #### Usage Example
 
 ```
-Usage of daytona:
+Usage of ./daytona:
   -address string
       Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied
   -auto-renew
@@ -382,6 +398,18 @@ Usage of daytona:
       kubernetes service account jtw token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
   -max-auth-duration int
       the value, in seconds, for which DAYTONA should attempt to renew a token before exiting (env: MAX_AUTH_DURATION) (default 300)
+  -pki-cert string
+      a full file path where the vault-issued x509 certificate will be written to (env: PKI_CERT)
+  -pki-domains string
+      a comma-separated list of domain names to use when requesting a certificate (env: PKI_DOMAINS)
+  -pki-issuer string
+      the name of the PKI CA backend to use when requesting a certificate (env: PKI_ISSUER)
+  -pki-privkey string
+      a full file path where the vault-issued private key will be written to (env: PKI_PRIVKEY)
+  -pki-role string
+      the name of the PKI role to use when requesting a certificate (env: PKI_ROLE)
+  -pki-use-ca-chain
+      if set, retrieve the CA chain and include it in the certificate file output (env: PKI_USE_CA_CHAIN)
   -renewal-increment int
       the value, in seconds, to which the token's ttl should be renewed (env: RENEWAL_INCREMENT) (default 43200)
   -renewal-interval int
