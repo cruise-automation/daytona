@@ -32,12 +32,13 @@ import (
 )
 
 const defaultKeyName = "value"
-const secretLocationPrefix = "DAYTONA_SECRET_DESTINATION_"
+const secretStoragePathPrefix = "VAULT_SECRET_"
+const secretDestinationPrefix = "DAYTONA_SECRET_DESTINATION_"
 
 // SecretFetcher is responsible for fetching sercrets..
 func SecretFetcher(client *api.Client, config cfg.Config) {
 	locations := prefixSecretLocationDefined()
-	if config.SecretPayloadPath == "" && !config.SecretEnv && len(locations) == 0 {
+	if config.SecretPayloadPath == "" && !config.SecretEnv && len(locations["src"]) == 0 && len(locations["dst"]) == 0 {
 		log.Println("No secret output method was configured, will not attempt to retrieve secrets")
 		return
 	}
@@ -59,11 +60,12 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		}
 
 		// Single secret
-		if strings.HasPrefix(envKey, "VAULT_SECRET_") {
+		if strings.HasPrefix(envKey, secretStoragePathPrefix) {
+			secretId := strings.TrimPrefix(envKey, secretStoragePathPrefix)
 			parallelReader.AsyncRequestKeyPath(secretPath)
 			secretResult := parallelReader.ReadSecretResult()
 
-			err := addSecrets(client, secretResult, secrets)
+			err := addSecrets(client, secretResult, secrets, secretId)
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -84,7 +86,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 			// Iterate until all secrets were returned
 			for range paths {
 				secretResult := parallelReader.ReadSecretResult()
-				err := addSecrets(client, secretResult, secrets)
+				err := addSecrets(client, secretResult, secrets, "")
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -101,8 +103,8 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	}
 
 	// Write all secrets to their specified locations
-	if len(locations) != 0 {
-		err := writeSecretsToDestination(secrets, locations)
+	if len(locations["dst"]) != 0 {
+		err := writeSecretsToDestination(secrets, locations["dst"])
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -197,15 +199,22 @@ func addSecret(secrets map[string]string, k string, v interface{}) error {
 	return nil
 }
 
-func addSecrets(client *api.Client, secretResult *SecretResult, secrets map[string]string) error {
+func addSecrets(client *api.Client, secretResult *SecretResult, secrets map[string]string, id string) error {
 	keyPath := secretResult.KeyPath
 	secret := secretResult.Secret
 	err := secretResult.Err
+	var keyName string
 
-	_, keyName := path.Split(keyPath)
+	if id == "" {
+		_, keyName = path.Split(keyPath)
+	} else {
+		keyName = id
+	}
+
 	if err != nil {
 		log.Fatalf("Failed retrieving secret %s: %s\n", keyPath, err)
 	}
+
 	if secret == nil {
 		log.Fatalf("Vault listed a secret '%s', but got not-found trying to read it at '%s'; very strange\n", keyName, keyPath)
 	}
@@ -236,16 +245,23 @@ func addSecrets(client *api.Client, secretResult *SecretResult, secrets map[stri
 
 // prefixSecretLocationDefined checks whether any of the configured
 // secrets for fetching are using an explicit destination.
-func prefixSecretLocationDefined() map[string]string {
-	locations := make(map[string]string)
+func prefixSecretLocationDefined() map[string]map[string]string {
+	var locations = map[string]map[string]string{}
+	locations["src"] = make(map[string]string)
+	locations["dst"] = make(map[string]string)
 	envs := os.Environ()
 	for _, v := range envs {
 		pair := strings.Split(v, "=")
 		envKey := pair[0]
-		if strings.HasPrefix(envKey, secretLocationPrefix) {
-			secret := strings.TrimPrefix(envKey, secretLocationPrefix)
-			locations[secret] = os.Getenv(envKey)
+		if strings.HasPrefix(envKey, secretStoragePathPrefix) {
+			srcId := strings.TrimPrefix(envKey, secretStoragePathPrefix)
+			locations["src"][srcId] = os.Getenv(envKey)
 		}
+		if strings.HasPrefix(envKey, secretDestinationPrefix) {
+			dstId := strings.TrimPrefix(envKey, secretDestinationPrefix)
+			locations["dst"][dstId] = os.Getenv(envKey)
+		}
+
 	}
 	return locations
 }

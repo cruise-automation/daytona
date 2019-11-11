@@ -43,7 +43,17 @@ The following authentication methods are supported:
 
  Any unique value can be appended to `VAULT_SECRET_` in order to provide the ability to supply multiple secret paths. e.g. `VAULT_SECRETS_APPLICATION=secret/path/to/my/application/directory`, `VAULT_SECRETS_COMMON=secret/path/common`, `VAULT_SECRET_1=secret/path/to/individual/secret`.
 
-If a secret in Vault has a corresponding environment variable pointed at a file location prefixed with `DAYTONA_SECRET_DESTINATION` then the secret is written to that location instead of the default destination. For example, if `VAULT_SECRET_API_KEY=secret/path/to/API_KEY` and `DAYTONA_SECRET_DESTINATION_API_KEY='/etc/api.conf'` are defined then the key is written to /etc/api.conf instead of the default location. Other keys are written at the normal location as defined by their `VAULT_SECRET` value.
+### Secret fetching in depth
+
+- `VAULT_SECRETS_`: One or more _locations_ in vault can be specified using this as an envvar prefix, indicating a path for `daytona` to iterate over. If `VAULT_SECRETS_APPLICATION='secret/path/to/my/application/directory'` is provided, with the secrets `api_key`, `db_key`, and `password` under it, these secrets will be discovered and available for use via one of these output methods:
+  + `DAYTONA_SECRET_DESTINATION_`: If a discovered secret name is prefixed with `DAYTONA_SECRET_DESTINATION_`, the secret will be written to the location provided. In the example above, if `DAYTONA_SECRET_DESTINATION_db_key` is specified, the `db_key` secret will b e written to the location provided. This must be a file that is writable by `daytona`.
+  + `SECRET_PATH`: When this envvar/CLI flag is provided, the secrets will be written in a JSON blob at the location provided.
+  + `SECRET_ENV`: When this is used in conjunction with the `-entrypoint` flag, these secrets will be populated as the envvars `api_key`, `db_key`, and `password`  with their corresponding values.
+
+- `VAULT_SECRET_`: One or more _secret paths_ in vault can be specified using this as an envvar prefix, indicating a single secret for `daytona` to retrieve. If `VAULT_SECRET_ROOT_PW='secret/path/to/my/application/root_password'` is provided, this secret will be retrieved and available for use via one of these output methods:
+  + `DAYTONA_SECRET_DESTINATION_`: If used with `VAULT_SECRET_`, and the secret name is prefixed with `DAYTONA_SECRET_DESTINATION_`, the secret will be written to the location provided. In the example above, if `DAYTONA_SECRET_DESTINATION_ROOT_PW` is specified, the `root_password` secret will be written to the location provided. This must be a file that is writable by `daytona`. *Note*: this is slightly different functionality than `VAULT_SECRETS_`; the pairing of source path in vault and destination path locally are determined by the suffix used in the `VAULT_SECRET_` & `DAYTONA_SECRET_DESTINATION_` envvars.
+  + `SECRET_PATH`: When this envvar/CLI flag is provided, the secret will be written in a JSON blob at the location provided. Note that if `SECRET_PATH` is used as well as a `DAYTONA_SECRET_DESTINATION_` envvar that matches the `VAULT_SECRET_`, the secret value will be written in _both_ locations.
+  + `SECRET_ENV`: When this is used in conjunction with the `-entrypoint` flag, this secrets will be populated as the envvar `ROOT_PW`.
 
 #### Outputs
 
