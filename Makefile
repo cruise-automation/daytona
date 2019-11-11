@@ -36,7 +36,8 @@ lint:
 	gofmt -d -l ${GOFILES}
 
 build:
-	go build -a -o daytona cmd/daytona/main.go
+	go build -ldflags="-s -w" -a -o daytona cmd/daytona/main.go
+	@type -P upx && upx daytona || echo "[INFO] No upx installed, not compressing."
 
 image: check
 	docker build -t daytona:${VERSION_TAG} .
