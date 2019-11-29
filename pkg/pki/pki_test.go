@@ -439,25 +439,25 @@ evoHW7vpj9w4LQ==
 
 func testHandler() http.Handler {
 	return http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				if strings.HasSuffix(r.URL.Path, "wrong-role") {
-					w.WriteHeader(400)
-					fmt.Fprintln(w, testPkiIssueResponseWrongRole)
+		func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, "wrong-role") {
+				w.WriteHeader(400)
+				fmt.Fprintln(w, testPkiIssueResponseWrongRole)
+			}
+			if strings.HasSuffix(r.URL.Path, "correct-role") {
+				decoder := json.NewDecoder(r.Body)
+				tstr := struct {
+					Alt_names   []string `json:"alt_names"`
+					Common_name string   `json:"common_name"`
+				}{}
+				_ = decoder.Decode(&tstr)
+				if len(tstr.Alt_names) > 1 {
+					fmt.Fprintln(w, testPkiIssueResponseMultipleDomain)
+				} else {
+					fmt.Fprintln(w, testPkiIssueResponseSingleDomain)
 				}
-				if strings.HasSuffix(r.URL.Path, "correct-role") {
-					decoder := json.NewDecoder(r.Body)
-					tstr := struct {
-					    Alt_names []string `json:"alt_names"`
-					    Common_name string `json:"common_name"`
-					}{}
-					_ = decoder.Decode(&tstr)
-					if len(tstr.Alt_names) > 1 {
-						fmt.Fprintln(w, testPkiIssueResponseMultipleDomain)
-					} else {
-						fmt.Fprintln(w, testPkiIssueResponseSingleDomain)
-					}
-				}
-			})
+			}
+		})
 }
 
 func TestSingleDomainCertIssuance(t *testing.T) {
@@ -593,13 +593,13 @@ func TestCertIssuanceErrors(t *testing.T) {
 	assert.Panics(t, func() { CertFetcher(client, config) })
 
 	config.PkiRole = "correct-role"
-    err = os.Chmod(keyFile.Name(), 0444)
+	err = os.Chmod(keyFile.Name(), 0444)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Panics(t, func() { CertFetcher(client, config) })
 
-    err = os.Chmod(certFile.Name(), 0444)
+	err = os.Chmod(certFile.Name(), 0444)
 	if err != nil {
 		t.Fatal(err)
 	}
