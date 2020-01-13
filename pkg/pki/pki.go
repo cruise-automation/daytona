@@ -43,7 +43,7 @@ func CertFetcher(client *api.Client, config cfg.Config) {
 		if len(domainList) > 1 {
 			cnData = map[string]interface{}{
 				"common_name": domainList[0],
-				"alt_names": domainList[1:],
+				"alt_names":   domainList[1:],
 			}
 		} else {
 			cnData = map[string]interface{}{
@@ -73,7 +73,7 @@ func writeCertData(resp *api.Secret, certFile string, keyFile string, useCaChain
 		}
 	}
 
-	err := ioutil.WriteFile(certFile, []byte(certificate.String()), 0600)
+	err := ioutil.WriteFile(certFile, certificate.Bytes(), 0600)
 	if err != nil {
 		return fmt.Errorf("could not write certificate to file '%s': %s", certFile, err)
 	}
