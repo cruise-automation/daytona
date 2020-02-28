@@ -139,37 +139,37 @@ kind: Pod
 metadata:
   name: awesome-app
 spec:
-  volumes:
-  - name: vault-secrets
-    emptyDir:
-      medium: Memory
-  initContainers:
   serviceAccountName: awesome-app
-  - name: daytona
-    image: gcr.io/supa-fast-c432/daytona@sha256:abcd123
-    securityContext:
-      runAsUser: 9999
-      allowPrivilegeEscalation: false
-    volumeMounts:
+  volumes:
     - name: vault-secrets
-      mountPath: /home/vault
-    env:
-    - name: K8S_AUTH
-      value: "true"
-    - name : K8S_AUTH_MOUNT
-      value: "kubernetes-gcp-dev-cluster"
-    - name: SECRET_ENV
-      value: "true"
-    - name: TOKEN_PATH
-      value: /home/vault/.vault-token
-    - name: VAULT_AUTH_ROLE
-      value: awesome-app-vault-role-name
-    - name: SECRET_PATH
-      value: /home/vault/secrets
-    - name: VAULT_SECRETS_APP
-      value: secret/path/to/app
-    - name: VAULT_SECRETS_GLOBAL
-      value: secret/path/to/global/metrics
+      emptyDir:
+        medium: Memory
+  initContainers:
+    - name: daytona
+      image: gcr.io/supa-fast-c432/daytona@sha256:abcd123
+      securityContext:
+        runAsUser: 9999
+        allowPrivilegeEscalation: false
+      volumeMounts:
+      - name: vault-secrets
+        mountPath: /home/vault
+      env:
+      - name: K8S_AUTH
+        value: "true"
+      - name : K8S_AUTH_MOUNT
+        value: "kubernetes-gcp-dev-cluster"
+      - name: SECRET_ENV
+        value: "true"
+      - name: TOKEN_PATH
+        value: /home/vault/.vault-token
+      - name: VAULT_AUTH_ROLE
+        value: awesome-app-vault-role-name
+      - name: SECRET_PATH
+        value: /home/vault/secrets
+      - name: VAULT_SECRETS_APP
+        value: secret/path/to/app
+      - name: VAULT_SECRETS_GLOBAL
+        value: secret/path/to/global/metrics
 ````
 
 Note the `securityContext` provided above. Without it, the daytona container runs as UID 0, which is root. Because daytona writes files with `0600` permissions, the files are only readable by a user with the same UID. It is necessary to run your other containers in the pod with the same `securityContext` in order to read the files that daytona places.
