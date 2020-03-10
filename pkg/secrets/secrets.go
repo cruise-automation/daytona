@@ -19,7 +19,6 @@ package secrets
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -31,132 +30,142 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const defaultKeyName = "value"
-const secretLocationPrefix = "DAYTONA_SECRET_DESTINATION_"
+const (
+	defaultKeyName           = "value"
+	secretDestinationPrefix  = "DAYTONA_SECRET_DESTINATION_"
+	secretStoragePathPrefix  = "VAULT_SECRET_"
+	secretsStoragePathPrefix = "VAULT_SECRETS_"
+)
 
-// SecretFetcher is responsible for fetching sercrets..
+// SecretDefinition is used for representing
+// a secret definition input
+type SecretDefinition struct {
+	envkey            string
+	secretID          string
+	secretApex        string
+	outputDestination string
+	paths             []string
+	secrets           map[string]string
+	plural            bool
+}
+
+// SecretFetcher inspects the environment for variables that
+// define secret definitions. The variables are used to guide
+// the SecretFetcher in acquring and outputting the specified secrets
 func SecretFetcher(client *api.Client, config cfg.Config) {
-	locations := prefixSecretLocationDefined()
-	if config.SecretPayloadPath == "" && !config.SecretEnv && len(locations) == 0 {
-		log.Println("No secret output method was configured, will not attempt to retrieve secrets")
-		return
-	}
-
 	log.Println("Starting secret fetch")
-	secrets := make(map[string]string)
+
+	defs := make([]*SecretDefinition, 0)
 
 	ctx := context.Background()
 	parallelReader := NewParallelReader(ctx, client.Logical(), config.Workers)
 
 	envs := os.Environ()
 	// Find where all our secret keys are in vault
-	for _, v := range envs {
-		pair := strings.Split(v, "=")
+	for _, env := range envs {
+		// VAULT_SECRET_WHATEVER=secret/application/thing
+		// VAULT_SECRETS_WHATEVER=secret/application/things
+		// envKey=secretPath
+		pair := strings.Split(env, "=")
 		envKey := pair[0]
-		secretPath := os.Getenv(envKey)
-		if secretPath == "" {
+		apex := os.Getenv(envKey)
+		if apex == "" {
 			continue
 		}
 
-		// Single secret
-		if strings.HasPrefix(envKey, "VAULT_SECRET_") {
-			parallelReader.AsyncRequestKeyPath(secretPath)
+		def := &SecretDefinition{
+			envkey:     envKey,
+			secretApex: apex,
+			secrets:    make(map[string]string),
+		}
+
+		switch {
+		case strings.HasPrefix(envKey, secretStoragePathPrefix):
+			def.secretID = strings.TrimPrefix(envKey, secretStoragePathPrefix)
+			def.paths = append(def.paths, apex)
+		case strings.HasPrefix(envKey, secretsStoragePathPrefix):
+			def.secretID = strings.TrimPrefix(envKey, secretsStoragePathPrefix)
+			def.plural = true
+		default:
+			continue
+		}
+
+		// look for a corresponding secretDestinationPrefix key.
+		// sometimes these can be cased inconsistently so we have to attempt normalization.
+		// e.g.  VAULT_SECRET_APPLICATIONA --> DAYTONA_SECRET_DESTINATION_applicationa
+		if dest := os.Getenv(secretDestinationPrefix + def.secretID); dest != "" {
+			def.outputDestination = dest
+		} else if dest := os.Getenv(secretDestinationPrefix + strings.ToLower(def.secretID)); dest != "" {
+			def.outputDestination = dest
+		} else if dest := os.Getenv(secretDestinationPrefix + strings.ToUpper(def.secretID)); dest != "" {
+			def.outputDestination = dest
+		}
+
+		if config.SecretPayloadPath == "" && !config.SecretEnv {
+			if def.outputDestination == "" {
+				log.Printf("No secret output method was configured for %s, will not attempt to retrieve secrets for this defintion", def.envkey)
+				continue
+			}
+		}
+
+		if def.plural {
+			err := def.Walk(client)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		}
+
+		for _, path := range def.paths {
+			parallelReader.AsyncRequestKeyPath(path)
+		}
+		for range def.paths {
 			secretResult := parallelReader.ReadSecretResult()
+			if secretResult.Err != nil {
+				log.Fatalln(secretResult.Err)
+			}
 
-			err := addSecrets(client, secretResult, secrets)
+			err := def.addSecrets(client, secretResult)
 			if err != nil {
 				log.Fatalln(err)
 			}
 		}
 
-		// Path containing multiple secrets
-		if strings.HasPrefix(envKey, "VAULT_SECRETS_") {
-			paths, err := listSecrets(client, secretPath)
+		defs = append(defs, def)
+	}
+
+	// output the secret definitions
+	for _, def := range defs {
+		if config.SecretEnv {
+			setEnvSecrets(def.secrets)
+		}
+
+		if def.outputDestination != "" {
+			writeSecretsToDestination(def)
+		}
+
+		if config.SecretPayloadPath != "" {
+			err := writeJSONSecrets(def.secrets, config.SecretPayloadPath)
 			if err != nil {
 				log.Fatalln(err)
 			}
-
-			// Request secrets in parallel (using up to N workers)
-			for _, path := range paths {
-				parallelReader.AsyncRequestKeyPath(path)
-			}
-
-			// Iterate until all secrets were returned
-			for range paths {
-				secretResult := parallelReader.ReadSecretResult()
-				err := addSecrets(client, secretResult, secrets)
-				if err != nil {
-					log.Fatalln(err)
-				}
-			}
-		}
-	}
-
-	// Write all secrets to a configured json file
-	if config.SecretPayloadPath != "" {
-		err := writeJSONSecrets(secrets, config.SecretPayloadPath)
-		if err != nil {
-			log.Fatalln(err)
-		}
-	}
-
-	// Write all secrets to their specified locations
-	if len(locations) != 0 {
-		err := writeSecretsToDestination(secrets, locations)
-		if err != nil {
-			log.Fatalln(err)
-		}
-	}
-
-	// Export secret environment variables if configured, and we are acting as a stub entrypoint for a container
-	if config.SecretEnv {
-		err := setEnvSecrets(secrets)
-		if err != nil {
-			log.Fatalln(err)
 		}
 	}
 }
 
-// listSecrets returns a list of absolute paths to all secrets located under "secretPath",
-// or an error
-func listSecrets(client *api.Client, secretPath string) ([]string, error) {
-	paths := make([]string, 0, 10)
-
-	list, err := client.Logical().List(secretPath)
-	if err != nil {
-		return nil, fmt.Errorf("there was a problem listing %s: %s", secretPath, err)
-	}
-	if list == nil || len(list.Data) == 0 {
-		return nil, fmt.Errorf("no secrets found under: %s", secretPath)
-	}
-	log.Println("Starting iteration on", secretPath)
-	// list.Data is like: map[string]interface {}{"keys":[]interface {}{"API_KEY", "APPLICATION_KEY", "DB_PASS"}}
-	keys, ok := list.Data["keys"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("unexpected list.Data format: %#v", list.Data)
-	}
-	for _, k := range keys {
-		key, ok := k.(string)
-		if !ok {
-			return nil, fmt.Errorf("non-string secret name: %#v", key)
-		}
-		paths = append(paths, path.Join(secretPath, key))
-	}
-
-	return paths, nil
-}
-
-func writeSecretsToDestination(secrets map[string]string, locations map[string]string) error {
-	for secret, secretValue := range secrets {
-		secretDestination, ok := locations[secret]
-		if !ok {
-			continue
-		}
-		err := ioutil.WriteFile(secretDestination, []byte(secretValue), 0600)
+func writeSecretsToDestination(def *SecretDefinition) error {
+	if def.plural {
+		err := writeJSONSecrets(def.secrets, def.outputDestination)
 		if err != nil {
-			return fmt.Errorf("could not write secrets to file '%s': %s", secretDestination, err)
+			return err
 		}
-		log.Printf("Wrote secret to %s\n", secretDestination)
+	} else {
+		for _, secretValue := range def.secrets {
+			err := ioutil.WriteFile(def.outputDestination, []byte(secretValue), 0600)
+			if err != nil {
+				return fmt.Errorf("could not write secrets to file '%s': %s", def.outputDestination, err)
+			}
+			log.Printf("Wrote secret to %s\n", def.outputDestination)
+		}
 	}
 	return nil
 }
@@ -185,19 +194,7 @@ func setEnvSecrets(secrets map[string]string) error {
 	return nil
 }
 
-func addSecret(secrets map[string]string, k string, v interface{}) error {
-	if secrets[k] != "" {
-		return errors.New("duplicate secret name: " + k)
-	}
-	s, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("secret '%s' has non-string value: %#v", k, v)
-	}
-	secrets[k] = s
-	return nil
-}
-
-func addSecrets(client *api.Client, secretResult *SecretResult, secrets map[string]string) error {
+func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretResult) error {
 	keyPath := secretResult.KeyPath
 	secret := secretResult.Secret
 	err := secretResult.Err
@@ -214,38 +211,43 @@ func addSecrets(client *api.Client, secretResult *SecretResult, secrets map[stri
 	// Return last error encountered during processing, if any
 	var lastErr error
 
-	// detect and fetch defaultKeyName
-	if secretData[defaultKeyName] != nil {
-		err := addSecret(secrets, keyName, secretData[defaultKeyName])
-		if err != nil {
-			lastErr = err
-		}
-		delete(secretData, defaultKeyName)
-	}
-
-	// iterate over remaining map entries
 	for k, v := range secretData {
-		expandedKeyName := fmt.Sprintf("%s_%s", keyName, k)
-		err := addSecret(secrets, expandedKeyName, v)
-		if err != nil {
-			lastErr = err
+		switch k {
+		case defaultKeyName:
+			sd.secrets[keyName] = v.(string)
+		default:
+			expandedKeyName := fmt.Sprintf("%s_%s", keyName, k)
+			sd.secrets[expandedKeyName] = v.(string)
 		}
 	}
 	return lastErr
 }
 
-// prefixSecretLocationDefined checks whether any of the configured
-// secrets for fetching are using an explicit destination.
-func prefixSecretLocationDefined() map[string]string {
-	locations := make(map[string]string)
-	envs := os.Environ()
-	for _, v := range envs {
-		pair := strings.Split(v, "=")
-		envKey := pair[0]
-		if strings.HasPrefix(envKey, secretLocationPrefix) {
-			secret := strings.TrimPrefix(envKey, secretLocationPrefix)
-			locations[secret] = os.Getenv(envKey)
-		}
+// Walk walks a SecretDefintions SecretApex. This is used for iteration
+// of the provided apex path
+func (sd *SecretDefinition) Walk(client *api.Client) error {
+	paths := make([]string, 0)
+
+	list, err := client.Logical().List(sd.secretApex)
+	if err != nil {
+		return fmt.Errorf("there was a problem listing %s: %s", sd.secretApex, err)
 	}
-	return locations
+	if list == nil || len(list.Data) == 0 {
+		return fmt.Errorf("no secrets found under: %s", sd.secretApex)
+	}
+	log.Println("Starting iteration on", sd.secretApex)
+	// list.Data is like: map[string]interface {}{"keys":[]interface {}{"API_KEY", "APPLICATION_KEY", "DB_PASS"}}
+	keys, ok := list.Data["keys"].([]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected list.Data format: %#v", list.Data)
+	}
+	for _, k := range keys {
+		key, ok := k.(string)
+		if !ok {
+			return fmt.Errorf("non-string secret name: %#v", key)
+		}
+		paths = append(paths, path.Join(sd.secretApex, key))
+	}
+	sd.paths = paths
+	return nil
 }
