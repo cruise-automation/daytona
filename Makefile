@@ -12,6 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+OSNAME := $(shell uname -s)
+ifeq ($(OSNAME),Linux)
+	SHELL:=/bin/bash
+else ifeq ($(OSNAME),Darwin)
+	SHELL:=/bin/sh
+endif
+
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TAG=$(VERSION:v%=%) # drop the v-prefix for docker images, per convention
 PACKAGES=$(shell go list ./... | grep -v /vendor/)
