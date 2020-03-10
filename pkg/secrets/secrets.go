@@ -178,7 +178,7 @@ func setEnvSecrets(secrets map[string]string) error {
 	for k, v := range secrets {
 		err := os.Setenv(k, v)
 		if err != nil {
-			return fmt.Errorf("Error from os.Setenv: %s", err)
+			return fmt.Errorf("error from os.Setenv: %s", err)
 		}
 		log.Printf("Set env var: %s\n", k)
 	}

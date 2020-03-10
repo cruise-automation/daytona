@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/cruise-automation/daytona/pkg/config"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
 )
@@ -33,7 +32,7 @@ import (
 // source that should be authenticated against
 type Authenticator interface {
 	// Auth is used to authenticate to an external service
-	Auth(*api.Client, config.Config) (string, error)
+	Auth(*api.Client, cfg.Config) (string, error)
 }
 
 // authenticate authenticates!
@@ -158,7 +157,7 @@ func checkFileToken(client *api.Client, tokenPath string) bool {
 func RenewService(client *api.Client, config cfg.Config) {
 	interval := time.Second * time.Duration(config.RenewalInterval)
 	log.Println("Starting the token renewer service on interval", interval)
-	ticker := time.Tick(interval)
+	ticker := time.NewTicker(interval).C
 	for {
 		result, err := client.Auth().Token().LookupSelf()
 		if err != nil {

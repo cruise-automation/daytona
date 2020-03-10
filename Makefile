@@ -35,6 +35,10 @@ lint:
 	go vet ${PACKAGES}
 	gofmt -d -l ${GOFILES}
 
+# Install with go get honnef.co/go/tools/cmd/staticcheck
+staticcheck:
+	@for p in ${PACKAGES}; do staticcheck $${p}; done
+
 build:
 	go build -ldflags="-s -w" -a -o daytona cmd/daytona/main.go
 	@type -P upx && upx daytona || echo "[INFO] No upx installed, not compressing."

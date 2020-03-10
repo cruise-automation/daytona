@@ -25,7 +25,7 @@ func TestInvalidConfig(t *testing.T) {
 	config.AWSAuth = false
 	config.GCPAuth = false
 	err = config.ValidateConfig()
-	assert.Equal(t, "You must supply a role name via VAULT_AUTH_ROLE or -vault-auth-role", err.Error())
+	assert.Equal(t, "you must supply a role name via VAULT_AUTH_ROLE or -vault-auth-role", err.Error())
 
 	config.PkiIssuer = "test"
 	config.PkiRole = "test"
@@ -33,7 +33,7 @@ func TestInvalidConfig(t *testing.T) {
 	config.PkiCertificate = "test"
 	config.VaultAuthRoleName = "test"
 	err = config.ValidateConfig()
-	assert.Equal(t, "One or more required PKI signing values are missing. PKI_ISSUER: test, PKI_ROLE: test, PKI_DOMAINS: www.example.com, PKI_PRIVKEY: , PKI_CERT: test", err.Error())
+	assert.Equal(t, "one or more required PKI signing values are missing. PKI_ISSUER: test, PKI_ROLE: test, PKI_DOMAINS: www.example.com, PKI_PRIVKEY: , PKI_CERT: test", err.Error())
 
 	config.PkiIssuer = "test"
 	config.PkiRole = "test"
