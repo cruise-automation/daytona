@@ -157,7 +157,7 @@ func checkFileToken(client *api.Client, tokenPath string) bool {
 func RenewService(client *api.Client, config cfg.Config) {
 	interval := time.Second * time.Duration(config.RenewalInterval)
 	log.Println("Starting the token renewer service on interval", interval)
-	ticker := time.NewTicker(interval).C
+	ticker := time.Tick(interval)
 	for {
 		result, err := client.Auth().Token().LookupSelf()
 		if err != nil {
