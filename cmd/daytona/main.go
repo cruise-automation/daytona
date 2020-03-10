@@ -53,7 +53,7 @@ func init() {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("IAM_AUTH", "false"))
 		return err == nil && b
 	}(), "(legacy) select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)")
-	flag.StringVar(&config.K8STokenPath, "k8s-token-path", cfg.BuildDefaultConfigItem("K8S_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"), "kubernetes service account jtw token path (env: K8S_TOKEN_PATH)")
+	flag.StringVar(&config.K8STokenPath, "k8s-token-path", cfg.BuildDefaultConfigItem("K8S_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"), "kubernetes service account jwt token path (env: K8S_TOKEN_PATH)")
 	flag.StringVar(&config.VaultAuthRoleName, "vault-auth-role", cfg.BuildDefaultConfigItem("VAULT_AUTH_ROLE", ""), "the name of the role used for auth. used with either auth method (env: VAULT_AUTH_ROLE, note: will infer to k8s sa account name if left blank)")
 	flag.BoolVar(&config.GCPAuth, "gcp-auth", func() bool {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("GCP_AUTH", "false"))
