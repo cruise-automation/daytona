@@ -65,7 +65,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	for _, env := range envs {
 		// VAULT_SECRET_WHATEVER=secret/application/thing
 		// VAULT_SECRETS_WHATEVER=secret/application/things
-		// envKey=secretPath
+		// envKey=apex
 		pair := strings.Split(env, "=")
 		envKey := pair[0]
 		apex := os.Getenv(envKey)
@@ -89,6 +89,8 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		default:
 			continue
 		}
+
+		log.Printf("Found %s, attempting to read secrets from %s", envKey, apex)
 
 		// look for a corresponding secretDestinationPrefix key.
 		// sometimes these can be cased inconsistently so we have to attempt normalization.
@@ -208,6 +210,13 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 	}
 	secretData := secret.Data
 
+	// kv version 2 nests secret data beneath two data keys
+	// this makes a best effort to extract it
+	nestedData, ok := secretData["data"]
+	if ok {
+		secretData = nestedData.(map[string]interface{})
+	}
+
 	// Return last error encountered during processing, if any
 	var lastErr error
 
@@ -228,6 +237,20 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 func (sd *SecretDefinition) Walk(client *api.Client) error {
 	paths := make([]string, 0)
 
+	// kv version 2 secret backends list keys using a
+	// <mount_name>/metadata/<your supplied path> convention
+	// this extracts the mount and path values so they can be
+	// replaced by 'data' and re-assbled below when being
+	// added to the path slice
+	var isKV2 bool
+	var mount, sPath string
+	kv2Split := strings.Split(sd.secretApex, "metadata")
+	if len(kv2Split) == 2 {
+		isKV2 = true
+		mount = kv2Split[0]
+		sPath = kv2Split[1]
+	}
+
 	list, err := client.Logical().List(sd.secretApex)
 	if err != nil {
 		return fmt.Errorf("there was a problem listing %s: %s", sd.secretApex, err)
@@ -246,7 +269,11 @@ func (sd *SecretDefinition) Walk(client *api.Client) error {
 		if !ok {
 			return fmt.Errorf("non-string secret name: %#v", key)
 		}
-		paths = append(paths, path.Join(sd.secretApex, key))
+		apex := sd.secretApex
+		if isKV2 {
+			apex = mount + "data" + sPath
+		}
+		paths = append(paths, path.Join(apex, key))
 	}
 	sd.paths = paths
 	return nil

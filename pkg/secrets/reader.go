@@ -18,6 +18,7 @@ package secrets
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -90,6 +91,7 @@ func (pr *ParallelReader) worker() {
 		case <-pr.ctx.Done():
 			return
 		case keyPath := <-pr.keyPathInChan:
+			log.Printf("Reading path %s\n", keyPath)
 			secret, err := pr.logicalClient.Read(keyPath)
 			pr.secretOutChan <- &SecretResult{
 				KeyPath: keyPath,
