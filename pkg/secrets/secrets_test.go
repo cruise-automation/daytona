@@ -318,3 +318,71 @@ func TestSecretAWalk(t *testing.T) {
 	assert.Equal(t, "bbbb", destSecrets["credentials_api_b"])
 	assert.Equal(t, "password", destSecrets["other"])
 }
+
+func TestKV2(t *testing.T) {
+	cluster, client := startVaultTestCluster(t)
+	defer cluster.Cleanup()
+
+	var config cfg.Config
+
+	_, err := client.Logical().Write(fmt.Sprintf("kv/data/single"), map[string]interface{}{
+		"data": map[string]interface{}{
+			"value": "just a regular ole value",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 1; i < 4; i++ {
+		_, err := client.Logical().Write(fmt.Sprintf("kv/data/multiple/thing%v", i), map[string]interface{}{
+			"data": map[string]interface{}{
+				"value": fmt.Sprintf("%v", i),
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	testFiles := make([]*os.File, 0, 2)
+	testFileNames := []string{"secret-kv2-multiple-dest-", "secret-kv2-single-"}
+
+	for _, fileName := range testFileNames {
+		f, err := generateTestFile(fileName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(f.Name())
+		testFiles = append(testFiles, f)
+	}
+
+	os.Setenv("VAULT_SECRETS_THING", "kv/metadata/multiple")
+	os.Setenv("DAYTONA_SECRET_DESTINATION_THING", testFiles[0].Name())
+	os.Setenv("VAULT_SECRET_SINGLE", "kv/data/single")
+	os.Setenv("DAYTONA_SECRET_DESTINATION_SINGLE", testFiles[1].Name())
+	defer os.Unsetenv("VAULT_SECRETS_THING")
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_THING")
+	defer os.Unsetenv("VAULT_SECRET_SINGLE")
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_SINGLE")
+
+	SecretFetcher(client, config)
+
+	type expected struct {
+		Name    string
+		Payload string
+	}
+
+	expectedData := []expected{
+		expected{Name: testFiles[0].Name(), Payload: `{"thing1":"1","thing2":"2","thing3":"3"}`},
+		expected{Name: testFiles[1].Name(), Payload: "just a regular ole value"},
+	}
+
+	for _, expected := range expectedData {
+		data, err := ioutil.ReadFile(expected.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, expected.Payload, string(data))
+	}
+}
