@@ -36,7 +36,8 @@ import (
 
 var config cfg.Config
 
-const version = "1.0.1"
+// this is populated at build time
+var version string
 
 func init() {
 	flag.StringVar(&config.VaultAddress, "address", "", "Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied")
@@ -133,7 +134,7 @@ func init() {
 
 func main() {
 	log.SetPrefix("DAYTONA - ")
-	log.Printf("Starting v%s...\n", version)
+	log.Printf("Starting %s...\n", version)
 	flag.Parse()
 
 	if !config.ValidateAuthType() {
