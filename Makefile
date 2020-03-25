@@ -13,11 +13,6 @@
 #   limitations under the License.
 
 OSNAME := $(shell uname -s)
-ifeq ($(OSNAME),Linux)
-	SHELL:=/bin/bash
-else ifeq ($(OSNAME),Darwin)
-	SHELL:=/bin/sh
-endif
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TAG=$(VERSION:v%=%) # drop the v-prefix for docker images, per convention
@@ -44,7 +39,7 @@ lint:
 
 build:
 	go build -ldflags="-s -w" -a -o daytona cmd/daytona/main.go
-	@type -P upx && upx daytona || echo "[INFO] No upx installed, not compressing."
+	@command -v upx && upx daytona || echo "[INFO] No upx installed, not compressing."
 
 image: check
 	docker build -t daytona:${VERSION_TAG} .
