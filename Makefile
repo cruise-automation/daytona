@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-OSNAME := $(shell uname -s)
-
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TAG=$(VERSION:v%=%) # drop the v-prefix for docker images, per convention
 PACKAGES=$(shell go list ./... | grep -v /vendor/)
@@ -43,7 +41,7 @@ lint:
 	gofmt -d -l ${GOFILES}
 
 build:
-  CGO_ENABLED=0 go build ${GO_LDFLAGS} -a -o daytona cmd/daytona/main.go
+	CGO_ENABLED=0 go build ${GO_LDFLAGS} -a -o daytona cmd/daytona/main.go
 	@command -v upx && upx daytona || echo "[INFO] No upx installed, not compressing."
 
 image: check
