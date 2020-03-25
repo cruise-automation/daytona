@@ -39,14 +39,20 @@ var config cfg.Config
 // this is populated at build time
 var version string
 
+const (
+	flagAWSIAMAuth = "aws-auth"
+	flagK8SAuth    = "k8s-auth"
+	flagGCPAuth    = "gcp-auth"
+)
+
 func init() {
 	flag.StringVar(&config.VaultAddress, "address", "", "Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied")
 	flag.StringVar(&config.TokenPath, "token-path", cfg.BuildDefaultConfigItem("TOKEN_PATH", "~/.vault-token"), "a full file path where a token will be read from/written to (env: TOKEN_PATH)")
-	flag.BoolVar(&config.K8SAuth, "k8s-auth", func() bool {
+	flag.BoolVar(&config.K8SAuth, flagK8SAuth, func() bool {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("K8S_AUTH", "false"))
 		return err == nil && b
 	}(), "select kubernetes vault auth as the vault authentication mechanism (env: K8S_AUTH)")
-	flag.BoolVar(&config.AWSAuth, "aws-auth", func() bool {
+	flag.BoolVar(&config.AWSAuth, flagAWSIAMAuth, func() bool {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("IAM_AUTH", "false"))
 		return err == nil && b
 	}(), "select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)")
@@ -56,7 +62,7 @@ func init() {
 	}(), "(legacy) select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)")
 	flag.StringVar(&config.K8STokenPath, "k8s-token-path", cfg.BuildDefaultConfigItem("K8S_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"), "kubernetes service account jtw token path (env: K8S_TOKEN_PATH)")
 	flag.StringVar(&config.VaultAuthRoleName, "vault-auth-role", cfg.BuildDefaultConfigItem("VAULT_AUTH_ROLE", ""), "the name of the role used for auth. used with either auth method (env: VAULT_AUTH_ROLE, note: will infer to k8s sa account name if left blank)")
-	flag.BoolVar(&config.GCPAuth, "gcp-auth", func() bool {
+	flag.BoolVar(&config.GCPAuth, flagGCPAuth, func() bool {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("GCP_AUTH", "false"))
 		return err == nil && b
 	}(), "select Google Cloud Platform IAM auth as the vault authentication mechanism (env: GCP_AUTH)")
@@ -138,7 +144,7 @@ func main() {
 	flag.Parse()
 
 	if !config.ValidateAuthType() {
-		log.Fatal("You must provide an auth method: -k8s-auth or -aws-iam-auth or -gcp-auth")
+		log.Fatalf("You must provide an auth method: -%s or -%s or -%s\n", flagK8SAuth, flagAWSIAMAuth, flagGCPAuth)
 	}
 
 	switch {
