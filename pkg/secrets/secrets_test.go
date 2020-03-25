@@ -248,7 +248,7 @@ func TestSecretAWalk(t *testing.T) {
 				q := r.URL.Query()
 				list := q.Get("list")
 				if list == "true" {
-					fmt.Fprintln(w, `{"data": {"keys": ["credentials", "keys", "other"]}}`)
+					fmt.Fprintln(w, `{"data": {"keys": ["credentials", "keys", "other", "subpath/"]}}`)
 				} else {
 					if strings.HasSuffix(r.URL.Path, "keys") {
 						fmt.Fprintln(w, `{"data": {"api_key": "xx"}}`)
@@ -258,6 +258,10 @@ func TestSecretAWalk(t *testing.T) {
 					}
 					if strings.HasSuffix(r.URL.Path, "other") {
 						fmt.Fprintln(w, `{"data": {"value": "password"}}`)
+					}
+					if strings.HasSuffix(r.URL.Path, "subpath/") {
+						w.WriteHeader(404)
+						fmt.Fprintln(w, `{"errors": []}`)
 					}
 				}
 			}))

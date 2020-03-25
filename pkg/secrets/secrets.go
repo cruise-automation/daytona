@@ -246,7 +246,11 @@ func (sd *SecretDefinition) Walk(client *api.Client) error {
 		if !ok {
 			return fmt.Errorf("non-string secret name: %#v", key)
 		}
-		paths = append(paths, path.Join(sd.secretApex, key))
+		if !strings.HasSuffix(key, "/") {
+			paths = append(paths, path.Join(sd.secretApex, key))
+		} else {
+			log.Printf("Found subpath %s while walking %s - only top-level path iteration is supported at this time\n", key, sd.secretApex)
+		}
 	}
 	sd.paths = paths
 	return nil
