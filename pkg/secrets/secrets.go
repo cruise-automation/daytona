@@ -33,6 +33,7 @@ import (
 const (
 	defaultKeyName           = "value"
 	secretDestinationPrefix  = "DAYTONA_SECRET_DESTINATION_"
+	secretValueKeyPrefix     = "VAULT_VALUE_KEY_"
 	secretStoragePathPrefix  = "VAULT_SECRET_"
 	secretsStoragePathPrefix = "VAULT_SECRETS_"
 )
@@ -210,6 +211,16 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 
 	// Return last error encountered during processing, if any
 	var lastErr error
+
+	singleValueKey := os.Getenv(secretValueKeyPrefix + sd.secretID)
+	if singleValueKey != "" && !sd.plural {
+		v, ok := secretData[singleValueKey]
+		if ok {
+			sd.secrets[singleValueKey] = v.(string)
+			log.Printf("Found an explicit vault value key %s, will only read value %s\n", secretValueKeyPrefix+sd.secretID, singleValueKey)
+			return nil
+		}
+	}
 
 	for k, v := range secretData {
 		switch k {
