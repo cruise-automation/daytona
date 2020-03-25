@@ -37,17 +37,107 @@ The following authentication methods are supported:
 
 ## Secret Fetching
 
-`daytona` gives you the ability to pre-fetch secrets upon launch and store them either in environment variables or a specified JSON file after retrievial. The desired secrets are specified in one of two ways:
- * By providing environment variables prefixed with `VAULT_SECRET_` + the Vault path where the secret exists in Vault that can be _read_. This will fetch an individual secret in Vault.
- * By providing environment variables prefixed with `VAULT_SECRETS_` + the Vault path where the secrets exist in Vault that can be _listed_ and then _read_. This will fetch all secrets within the given Vault directory.
+`daytona` gives you the ability to pre-fetch secrets upon launch and store them either in environment variables, as JSON to a specified file, or as singular secrets to a specified file. You define what secrets should be fetched by supplying one or more **Secret Definitions**. Secret Definitions are supplied via environment variables.
 
- Any unique value can be appended to `VAULT_SECRET_` in order to provide the ability to supply multiple secret paths. e.g. `VAULT_SECRETS_APPLICATION=secret/path/to/my/application/directory`, `VAULT_SECRETS_COMMON=secret/path/common`, `VAULT_SECRET_1=secret/path/to/individual/secret`.
+**Secret Definition Decoder Guide**
 
-If a secret in Vault has a corresponding environment variable pointed at a file location prefixed with `DAYTONA_SECRET_DESTINATION` then the secret is written to that location instead of the default destination. For example, if `VAULT_SECRET_API_KEY=secret/path/to/API_KEY` and `DAYTONA_SECRET_DESTINATION_API_KEY='/etc/api.conf'` are defined then the key is written to /etc/api.conf instead of the default location. Other keys are written at the normal location as defined by their `VAULT_SECRET` value.
+`<STORAGE PATH PREFIX>_<secretID-SUFFIX>=<SECRET-APEX>`
+
+- `VAULT_SECRET_`: Singular Secret Storage Path Prefix
+- `VAULT_SECRETS_`: Plural (more than 1 secret beneath the specified path) Secret Storage Path Prefix
+- `secretID-SUFFIX`: The unique secret identifier that can be used to tie a Secret Storage Path Prefix to a corresponding Destination Prefix. The uniqueness of this value provides the ability to supply multiple secret paths.
+- `SECRET-APEX`: When used with **Singular** definitions,  the Vault path where the secret exists in Vault that can be read. When used with **Plural** definitions, the Vault path where the secrets exist in Vault that can be listed and then read. This will fetch all secrets within the given Vault directory.
+- `DAYTONA_SECRET_DESTINATION_`: (OPTIONAL) Secret Destination Prefix. This is a full file path location where the corresponding secret from the supplied storage path is written to.
+
+**Singular Secrets**
+- Singular Secret Declaration: `VAULT_SECRET_<secretID-SUFFIX>=<SECRET-APEX>`
+- Singular Secret Destination: `DAYTONA_SECRET_DESTINATION_<secretID-SUFFIX>=<FILE-PATH>`
+
+**Plural Secrets**
+- Plural Secret Declaration: `VAULT_SECRETS_<secretID-SUFFIX>=<SECRET-APEX>`
+- Singular Secret Destination: `DAYTONA_SECRET_DESTINATION_<secretID-SUFFIX>=<FILE-PATH>`
+
+---
+
+### Examples
+
+**Singular Secret**
+
+Vault Data
+
+```shell
+$ vault read secret/whatever/thing
+
+Key                 Value
+---                 -----
+refresh_interval    768h
+value               hello
+```
+
+Secret Definition
+
+```shell
+VAULT_SECRET_THING=secret/whatever/thing
+DAYTONA_SECRET_DESTINATION_THING=/tmp/top-secret
+```
+
+Result
+
+`hello` would be written to the file `/tmp/top-secret`
+
+---
+
+**Plurar Secrets**
+
+Vault Data
+
+```shell
+$ vault list secret/many
+
+Keys
+----
+thing1
+thing2
+thing3
+
+$ vault read secret/many/thing1
+
+Key                 Value
+---                 -----
+refresh_interval    768h
+value               1
+
+etc...
+```
+
+Secret Definition
+
+```shell
+VAULT_SECRETS_THING=secret/many
+DAYTONA_SECRET_DESTINATION_THING=/tmp/top-secret-many
+```
+
+Result
+
+`/tmp/top-secret` would be populated with:
+
+```json
+{
+  "thing1": "1",
+  "thing2": "2",
+  "thing3": "3"
+}
+```
+
 
 #### Outputs
 
-Fetched secrets can be output to a file in JSON format via the `-secret-path` flag or to enviornment variables via `-secret-env`. Because docker containers cannot set eachother's environment variables, `-secret-env` will have no effect unless used with the `-entrypoint` flag, so that any populated environment variables are passed to a provided executable.
+Fetched secrets can be output via the following methods:
+
+- `-secret-path` Specifies a file which to output a JSON representation of a fetched secret(s)
+- `DAYTONA_SECRET_DESTINATION_` The secret destination prefix as specified above
+- Enviornment variables via `-secret-env`. Because docker containers cannot set eachother's environment variables, `-secret-env` will have no effect unless used with the `-entrypoint` flag, so that any populated environment variables are passed to a provided executable.
+
 
 #### Data and Secret Key Layout
 
