@@ -217,7 +217,7 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 		v, ok := secretData[singleValueKey]
 		if ok {
 			sd.secrets[singleValueKey] = v.(string)
-			log.Printf("Found an explicit vault value key %s, will only read value %s", secretValueKeyPrefix+sd.secretID, singleValueKey)
+			log.Printf("Found an explicit vault value key %s, will only read value %s\n", secretValueKeyPrefix+sd.secretID, singleValueKey)
 			return nil
 		}
 	}
