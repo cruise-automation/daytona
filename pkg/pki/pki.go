@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"log"
 	"strings"
+	"time"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
@@ -33,24 +34,36 @@ func CertFetcher(client *api.Client, config cfg.Config) {
 		log.Println("Certificate or private key output path is empty, will not attempt to get certificate")
 		return
 	}
-	log.Println("Getting certificate from vault...")
 
-	cnData := map[string]interface{}{}
+	if config.PkiDomains == "" {
+		log.Println("Domain(s) not provided, will not attempt to get certificate")
+		return
+	}
+
+	// Construct our payload
+	domainList := strings.Split(config.PkiDomains, ",")
+
+	cnData := map[string]interface{}{
+		"common_name": domainList[0],
+	}
+
+	if len(domainList) > 1 {
+		cnData["alt_names"] = domainList[1:]
+	}
+
+	if config.PkiTTL != "" {
+		ttl, err := time.ParseDuration(config.PkiTTL)
+		if err != nil {
+			log.Printf("could not parse the provided TTL '%s': %s", config.PkiTTL, err)
+			return
+		}
+		cnData["ttl"] = time.Second * ttl
+	}
+
 
 	// Get certificate
-	if config.PkiDomains != "" {
-		domainList := strings.Split(config.PkiDomains, ",")
-		if len(domainList) > 1 {
-			cnData = map[string]interface{}{
-				"common_name": domainList[0],
-				"alt_names":   domainList[1:],
-			}
-		} else {
-			cnData = map[string]interface{}{
-				"common_name": domainList[0],
-			}
-		}
-	}
+	log.Println("Getting certificate from vault...")
+
 	path := config.PkiIssuer + "/issue/" + config.PkiRole
 	resp, err := client.Logical().Write(path, cnData)
 	if err != nil {

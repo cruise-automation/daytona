@@ -498,6 +498,8 @@ Usage of ./daytona:
       a full file path where the vault-issued private key will be written to (env: PKI_PRIVKEY)
   -pki-role string
       the name of the PKI role to use when requesting a certificate (env: PKI_ROLE)
+  -pki-ttl
+      if set, desired TTL for the vault-issued certificate (env: PKI_TTL)
   -pki-use-ca-chain
       if set, retrieve the CA chain and include it in the certificate file output (env: PKI_USE_CA_CHAIN)
   -renewal-increment int
