@@ -37,6 +37,7 @@ type Config struct {
 	PkiDomains        string
 	PkiPrivateKey     string
 	PkiCertificate    string
+	PkiTTL            string
 	PkiUseCaChain     bool
 }
 

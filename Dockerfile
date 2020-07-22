@@ -14,7 +14,7 @@
 ARG GO_VERSION=1.13
 FROM golang:${GO_VERSION}-alpine AS builder
 ENV GOFLAGS -mod=vendor
-RUN apk --update add ca-certificates make upx
+RUN apk --update add ca-certificates git make upx
 WORKDIR /go/src/github.com/cruise-automation/daytona
 COPY . .
 RUN \

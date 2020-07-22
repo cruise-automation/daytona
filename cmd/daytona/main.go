@@ -132,6 +132,7 @@ func init() {
 	flag.StringVar(&config.PkiDomains, "pki-domains", cfg.BuildDefaultConfigItem("PKI_DOMAINS", ""), "a comma-separated list of domain names to use when requesting a certificate (env: PKI_DOMAINS)")
 	flag.StringVar(&config.PkiPrivateKey, "pki-privkey", cfg.BuildDefaultConfigItem("PKI_PRIVKEY", ""), "a full file path where the vault-issued private key will be written to (env: PKI_PRIVKEY)")
 	flag.StringVar(&config.PkiCertificate, "pki-cert", cfg.BuildDefaultConfigItem("PKI_CERT", ""), "a full file path where the vault-issued x509 certificate will be written to (env: PKI_CERT)")
+	flag.StringVar(&config.PkiTTL, "pki-ttl", cfg.BuildDefaultConfigItem("PKI_TTL", ""), "desired TTL for the vault-issued certificate (env: PKI_TTL)")
 	flag.BoolVar(&config.PkiUseCaChain, "pki-use-ca-chain", func() bool {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("PKI_USE_CA_CHAIN", "false"))
 		return err == nil && b
