@@ -41,7 +41,7 @@ lint:
 	gofmt -d -l ${GOFILES}
 
 build:
-	CGO_ENABLED=0 go build ${GO_LDFLAGS} -a -o daytona cmd/daytona/main.go
+	CGO_ENABLED=0 go build ${GO_LDFLAGS} -o daytona cmd/daytona/main.go
 	@type -P upx && upx daytona || echo "[INFO] No upx installed, not compressing."
 
 image: check
