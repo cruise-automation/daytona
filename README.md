@@ -1,3 +1,5 @@
+- [![Go](https://github.com/evelinfong/daytona/workflows/Go/badge.svg)](https://github.com/evelinfong/daytona/actions?query=workflow%3AGo+branch%3Amaster)
+
 ![DAYTONA](project/images/logo.png)
 
 This is intended to be a lighter, alternative, implementation of the Vault client CLI primarily for services and containers. Its core features are the ability to automate authentication, fetching of secrets, and automated token renewal.

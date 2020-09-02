@@ -1,6 +1,6 @@
 name: Go
 
-on: [pull_request]
+on: push
 
 jobs:
 
@@ -28,6 +28,9 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
+
+    - name: Lint
+      run: make lint
 
     - name: Build
       run: make build
