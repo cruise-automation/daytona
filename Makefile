@@ -17,6 +17,8 @@ VERSION_TAG=$(VERSION:v%=%) # drop the v-prefix for docker images, per conventio
 PACKAGES=$(shell go list ./... | grep -v /vendor/)
 GOFILES=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
 GO_LDFLAGS=-ldflags '-s -w -X main.version=${VERSION}'
+COVERAGE_FILES := coverage.out coverage.txt
+COVERAGES := $(COVERAGE_FILES:%=%_codecoverage)
 
 .PHONY: entry test lint build image push-image
 
@@ -32,12 +34,11 @@ endif
 test:
 	go test -cover -count=1 -v ${PACKAGES}
 
-coverage:
-	go test -cover -count=1 -coverprofile=coverage.out -v ${PACKAGES}
-	go tool cover -html=coverage.out
+%_codecoverage:
+	go test -cover -count=1 -coverprofile=$* -v ${PACKAGES}
+	go tool cover -html=$*
 
-coverage-txt:
-	go test -cover -count=1 -coverprofile=coverage.txt -v ${PACKAGES}
+coverage: ${COVERAGES}
 
 lint:
 	go vet ${PACKAGES}
