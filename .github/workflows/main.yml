@@ -39,7 +39,7 @@ jobs:
       run: make test #go test -v .
 
     - name: Test coverage
-      run: make coverage-txt
+      run: make coverage
 
     - name: Codecov
       uses: codecov/codecov-action@v1
