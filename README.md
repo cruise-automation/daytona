@@ -1,4 +1,5 @@
 - [![CI](https://github.com/evelinfong/daytona/workflows/Go/badge.svg)](https://github.com/evelinfong/daytona/actions?query=workflow%3AGo+branch%3Amaster)
+- [![codecov](https://codecov.io/gh/evelinfong/daytona/branch/master/graph/badge.svg)](https://codecov.io/gh/evelinfong/daytona)
 
 ![DAYTONA](project/images/logo.png)
 
