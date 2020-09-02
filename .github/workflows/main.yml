@@ -37,3 +37,12 @@ jobs:
 
     - name: Test
       run: make test #go test -v .
+
+    - name: Test coverage
+      run: make coverage-txt
+
+    - name: Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.txt
+        fail_ci_if_error: true # optional (default = false)

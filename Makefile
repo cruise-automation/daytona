@@ -36,6 +36,9 @@ coverage:
 	go test -cover -count=1 -coverprofile=coverage.out -v ${PACKAGES}
 	go tool cover -html=coverage.out
 
+coverage-txt:
+	go test -cover -count=1 -coverprofile=coverage.txt -v ${PACKAGES}
+
 lint:
 	go vet ${PACKAGES}
 	gofmt -d -l ${GOFILES}
