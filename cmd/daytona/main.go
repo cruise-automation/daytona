@@ -144,7 +144,7 @@ func main() {
 	flag.Parse()
 
 	if !config.ValidateAuthType() {
-		log.Fatalf("You must provide an auth method: -%s or -%s or -%s\n", flagK8SAuth, flagAWSIAMAuth, flagGCPAuth)
+		log.Fatal().Msgf("You must provide an auth method: -%s or -%s or -%s\n", flagK8SAuth, flagAWSIAMAuth, flagGCPAuth)
 	}
 
 	switch {
@@ -178,7 +178,7 @@ func main() {
 	}
 	client, err := api.NewClient(vaultConfig)
 	if err != nil {
-		log.Fatalf("Could not configure vault client. error: %s\n", err)
+		log.Fatal().Msgf("Could not configure vault client. error: %s\n", err)
 	}
 
 	if !auth.EnsureAuthenticated(client, config) {
@@ -215,11 +215,11 @@ func main() {
 		log.Info().Msg("Will exec: ", args)
 		binary, err := exec.LookPath(args[0])
 		if err != nil {
-			log.Fatalf("Error finding '%s' to exec: %s\n", args[0], err)
+			log.Fatal().Msgf("Error finding '%s' to exec: %s\n", args[0], err)
 		}
 		err = syscall.Exec(binary, args, os.Environ())
 		if err != nil {
-			log.Fatalf("Error from exec: %s\n", err)
+			log.Fatal().Msgf("Error from exec: %s\n", err)
 		}
 	}
 }

@@ -202,10 +202,10 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 
 	_, keyName := path.Split(keyPath)
 	if err != nil {
-		log.Fatalf("Failed retrieving secret %s: %s\n", keyPath, err)
+		log.Fatal().Msgf("Failed retrieving secret %s: %s\n", keyPath, err)
 	}
 	if secret == nil {
-		log.Fatalf("Vault listed a secret '%s', but got not-found trying to read it at '%s'; very strange\n", keyName, keyPath)
+		log.Fatal().Msgf("Vault listed a secret '%s', but got not-found trying to read it at '%s'; very strange\n", keyName, keyPath)
 	}
 	secretData := secret.Data
 
