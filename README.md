@@ -1,5 +1,5 @@
 - [![CI](https://github.com/evelinfong/daytona/workflows/Build/badge.svg)](https://github.com/evelinfong/daytona/actions?query=workflow%3ABuild+branch%3Amaster)
-- [![Docker](https://github.com/evelinfong/daytona/workflows/Go/badge.svg)](https://github.com/evelinfong/daytona/actions?query=workflow%3ADocker+branch%3Amaster)
+- [![Docker](https://github.com/evelinfong/daytona/workflows/Docker/badge.svg)](https://github.com/evelinfong/daytona/actions?query=workflow%3ADocker+branch%3Amaster)
 - [![codecov](https://codecov.io/gh/evelinfong/daytona/branch/master/graph/badge.svg)](https://codecov.io/gh/evelinfong/daytona)
 
 ![DAYTONA](project/images/logo.png)
