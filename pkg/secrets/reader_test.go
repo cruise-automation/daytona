@@ -33,42 +33,42 @@ type TestParameters struct {
 
 func TestParallelReader(t *testing.T) {
 	tests := []TestParameters{
-		TestParameters{
+		{
 			NumKeys:    0,
 			NumWorkers: 1,
 			Err:        nil,
 		},
-		TestParameters{
+		{
 			NumKeys:    1,
 			NumWorkers: 1,
 			Err:        nil,
 		},
-		TestParameters{
+		{
 			NumKeys:    5,
 			NumWorkers: 1,
 			Err:        nil,
 		},
-		TestParameters{
+		{
 			NumKeys:    2,
 			NumWorkers: 2,
 			Err:        nil,
 		},
-		TestParameters{
+		{
 			NumKeys:    1,
 			NumWorkers: 2,
 			Err:        nil,
 		},
-		TestParameters{
+		{
 			NumKeys:    5,
 			NumWorkers: 5,
 			Err:        nil,
 		},
-		TestParameters{
+		{
 			NumKeys:    0,
 			NumWorkers: 5,
 			Err:        nil,
 		},
-		TestParameters{
+		{
 			NumKeys:    5,
 			NumWorkers: 5,
 			Err:        fmt.Errorf("mock error"),
