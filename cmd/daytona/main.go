@@ -158,7 +158,7 @@ func main() {
 	}
 
 	if err := config.ValidateConfig(); err != nil {
-		log.Fatalln(err.Error())
+		log.Fatal().Msg(err.Error())
 	}
 
 	fullTokenPath, err := homedir.Expand(config.TokenPath)
@@ -182,7 +182,7 @@ func main() {
 	}
 
 	if !auth.EnsureAuthenticated(client, config) {
-		log.Fatalln("The maximum elapsed time has been reached for authentication attempts. exiting.")
+		log.Fatal().Msg("The maximum elapsed time has been reached for authentication attempts. exiting.")
 	}
 
 	secrets.SecretFetcher(client, config)
@@ -210,7 +210,7 @@ func main() {
 	if config.Entrypoint {
 		args := flag.Args()
 		if len(args) == 0 {
-			log.Fatalln("No arguments detected with use of -entrypoint")
+			log.Fatal().Msg("No arguments detected with use of -entrypoint")
 		}
 		log.Info().Msg("Will exec: ", args)
 		binary, err := exec.LookPath(args[0])

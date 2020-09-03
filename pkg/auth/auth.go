@@ -162,23 +162,23 @@ func RenewService(client *api.Client, config cfg.Config) {
 	for {
 		result, err := client.Auth().Token().LookupSelf()
 		if err != nil {
-			log.Fatalln("The existing token failed renewal:", err)
+			log.Fatal().Msg("The existing token failed renewal:", err)
 		}
 		ttl, err := result.TokenTTL()
 		if err != nil {
-			log.Fatalln("Failed to parse the token's ttl from JSON:", err)
+			log.Fatal().Msg("Failed to parse the token's ttl from JSON:", err)
 		}
 
 		if ttl.Seconds() < float64(config.RenewalThreshold) {
 			fmt.Println("token ttl of", ttl.Seconds(), "is below threshold of", config.RenewalThreshold, ", renewing to", config.RenewalIncrement)
 			secret, err := client.Auth().Token().RenewSelf(int(config.RenewalIncrement))
 			if err != nil {
-				log.Fatalln("Failed to renew the existing token: ", err)
+				log.Fatal().Msg("Failed to renew the existing token: ", err)
 			}
 			client.SetToken(secret.Auth.ClientToken)
 			err = ioutil.WriteFile(config.TokenPath, []byte(secret.Auth.ClientToken), 0600)
 			if err != nil {
-				log.Fatalln("Could not write token to file", config.TokenPath, err.Error())
+				log.Fatal().Msg("Could not write token to file", config.TokenPath, err.Error())
 			}
 		} else {
 			log.Info().Msgf("Existing token ttl of %d seconds is still above the threshold (%d), skipping renewal", int64(ttl.Seconds()), config.RenewalThreshold)

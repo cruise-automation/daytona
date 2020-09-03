@@ -112,7 +112,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		if def.plural {
 			err := def.Walk(client)
 			if err != nil {
-				log.Fatalln(err)
+				log.Fatal().Msg(err)
 			}
 		}
 
@@ -122,12 +122,12 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		for range def.paths {
 			secretResult := parallelReader.ReadSecretResult()
 			if secretResult.Err != nil {
-				log.Fatalln(secretResult.Err)
+				log.Fatal().Msg(secretResult.Err)
 			}
 
 			err := def.addSecrets(client, secretResult)
 			if err != nil {
-				log.Fatalln(err)
+				log.Fatal().Msg(err)
 			}
 		}
 
@@ -147,7 +147,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		if config.SecretPayloadPath != "" {
 			err := writeJSONSecrets(def.secrets, config.SecretPayloadPath)
 			if err != nil {
-				log.Fatalln(err)
+				log.Fatal().Msg(err)
 			}
 		}
 	}
