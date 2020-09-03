@@ -140,7 +140,7 @@ func init() {
 
 func main() {
 	log.SetPrefix("DAYTONA - ")
-	log.Printf("Starting %s...\n", version)
+	log.Info().Msgf("Starting %s...\n", version)
 	flag.Parse()
 
 	if !config.ValidateAuthType() {

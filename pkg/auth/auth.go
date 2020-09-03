@@ -48,13 +48,13 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 	}
 
 	if vaultToken == "" {
-		log.Printf("something weird happened, should have had the token, but do not")
+		log.Info().Msgf("something weird happened, should have had the token, but do not")
 		return false
 	}
 
 	err = ioutil.WriteFile(config.TokenPath, []byte(vaultToken), 0600)
 	if err != nil {
-		log.Printf("could not write token to %s: %v\n", config.TokenPath, err)
+		log.Info().Msgf("could not write token to %s: %v\n", config.TokenPath, err)
 		return false
 	}
 	client.SetToken(vaultToken)
@@ -88,14 +88,14 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 		return true
 	}
 
-	log.Printf("No token found in %q, trying to re-authenticate\n", config.TokenPath)
+	log.Info().Msgf("No token found in %q, trying to re-authenticate\n", config.TokenPath)
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 15
 	if config.InfiniteAuth {
 		log.Println("Infinite authentication enabled.")
 		bo.MaxElapsedTime = 0
 	} else {
-		log.Printf("Authentication will be attempted for %d seconds.\n", config.MaximumAuthRetry)
+		log.Info().Msgf("Authentication will be attempted for %d seconds.\n", config.MaximumAuthRetry)
 		bo.MaxElapsedTime = time.Second * time.Duration(config.MaximumAuthRetry)
 	}
 
@@ -145,7 +145,7 @@ func checkToken(client *api.Client) bool {
 func checkFileToken(client *api.Client, tokenPath string) bool {
 	fileToken, err := ioutil.ReadFile(tokenPath)
 	if err != nil {
-		log.Printf("Can't read an existing token at %q.\n", tokenPath)
+		log.Info().Msgf("Can't read an existing token at %q.\n", tokenPath)
 		return false
 	}
 	log.Println("Found an existing token at", tokenPath)
@@ -181,7 +181,7 @@ func RenewService(client *api.Client, config cfg.Config) {
 				log.Fatalln("Could not write token to file", config.TokenPath, err.Error())
 			}
 		} else {
-			log.Printf("Existing token ttl of %d seconds is still above the threshold (%d), skipping renewal", int64(ttl.Seconds()), config.RenewalThreshold)
+			log.Info().Msgf("Existing token ttl of %d seconds is still above the threshold (%d), skipping renewal", int64(ttl.Seconds()), config.RenewalThreshold)
 		}
 		<-ticker
 	}

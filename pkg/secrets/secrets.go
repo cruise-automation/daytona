@@ -104,7 +104,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 
 		if config.SecretPayloadPath == "" && !config.SecretEnv {
 			if def.outputDestination == "" {
-				log.Printf("No secret output method was configured for %s, will not attempt to retrieve secrets for this defintion", def.envkey)
+				log.Info().Msgf("No secret output method was configured for %s, will not attempt to retrieve secrets for this defintion", def.envkey)
 				continue
 			}
 		}
@@ -165,7 +165,7 @@ func writeSecretsToDestination(def *SecretDefinition) error {
 			if err != nil {
 				return fmt.Errorf("could not write secrets to file '%s': %s", def.outputDestination, err)
 			}
-			log.Printf("Wrote secret to %s\n", def.outputDestination)
+			log.Info().Msgf("Wrote secret to %s\n", def.outputDestination)
 		}
 	}
 	return nil
@@ -180,7 +180,7 @@ func writeJSONSecrets(secrets map[string]string, filepath string) error {
 	if err != nil {
 		return fmt.Errorf("could not write secrets to file '%s': %s", filepath, err)
 	}
-	log.Printf("Wrote %d secrets to %s\n", len(secrets), filepath)
+	log.Info().Msgf("Wrote %d secrets to %s\n", len(secrets), filepath)
 	return nil
 }
 
@@ -190,7 +190,7 @@ func setEnvSecrets(secrets map[string]string) error {
 		if err != nil {
 			return fmt.Errorf("Error from os.Setenv: %s", err)
 		}
-		log.Printf("Set env var: %s\n", k)
+		log.Info().Msgf("Set env var: %s\n", k)
 	}
 	return nil
 }
@@ -217,7 +217,7 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 		v, ok := secretData[singleValueKey]
 		if ok {
 			sd.secrets[singleValueKey] = v.(string)
-			log.Printf("Found an explicit vault value key %s, will only read value %s\n", secretValueKeyPrefix+sd.secretID, singleValueKey)
+			log.Info().Msgf("Found an explicit vault value key %s, will only read value %s\n", secretValueKeyPrefix+sd.secretID, singleValueKey)
 			return nil
 		}
 	}
@@ -260,7 +260,7 @@ func (sd *SecretDefinition) Walk(client *api.Client) error {
 		if !strings.HasSuffix(key, "/") {
 			paths = append(paths, path.Join(sd.secretApex, key))
 		} else {
-			log.Printf("Found subpath %s while walking %s - only top-level path iteration is supported at this time\n", key, sd.secretApex)
+			log.Info().Msgf("Found subpath %s while walking %s - only top-level path iteration is supported at this time\n", key, sd.secretApex)
 		}
 	}
 	sd.paths = paths
