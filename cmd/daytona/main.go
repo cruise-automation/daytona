@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -32,6 +31,7 @@ import (
 	"github.com/cruise-automation/daytona/pkg/secrets"
 	"github.com/hashicorp/vault/api"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/rs/zerolog/log"
 )
 
 var config cfg.Config
@@ -139,11 +139,11 @@ func init() {
 }
 
 func main() {
-	log.Info().Msgf("Starting %s...\n", version)
+	log.Info().Str("version", version).Msg("Starting ...")
 	flag.Parse()
 
 	if !config.ValidateAuthType() {
-		log.Fatal().Msgf("You must provide an auth method: -%s or -%s or -%s\n", flagK8SAuth, flagAWSIAMAuth, flagGCPAuth)
+		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth}).Msg("You must provide an auth method")
 	}
 
 	switch {
@@ -177,7 +177,7 @@ func main() {
 	}
 	client, err := api.NewClient(vaultConfig)
 	if err != nil {
-		log.Fatal().Msgf("Could not configure vault client. error: %s\n", err)
+		log.Fatal().Err(err).Msg("Could not configure vault client")
 	}
 
 	if !auth.EnsureAuthenticated(client, config) {
@@ -214,11 +214,11 @@ func main() {
 		log.Info().Strs("args", args).Msg("Will exec")
 		binary, err := exec.LookPath(args[0])
 		if err != nil {
-			log.Fatal().Msgf("Error finding '%s' to exec: %s\n", args[0], err)
+			log.Fatal().Err(err).Str("binary", args[0]).Msg("Unable to find binary to exec")
 		}
 		err = syscall.Exec(binary, args, os.Environ())
 		if err != nil {
-			log.Fatal().Msgf("Error from exec: %s\n", err)
+			log.Fatal().Err(err).Msg("Error from exec")
 		}
 	}
 }

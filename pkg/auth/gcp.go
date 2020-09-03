@@ -20,13 +20,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"time"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	iam "google.golang.org/api/iam/v1"
 )

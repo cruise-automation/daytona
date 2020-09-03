@@ -20,12 +20,12 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"github.com/rs/zerolog/log"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/briankassouf/jose/jws"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // K8SService is an external service that vault can authenticate requests against
@@ -56,7 +56,7 @@ func InferK8SConfig(config *cfg.Config) {
 	if config.VaultAuthRoleName == "" {
 		saName, err := inferVaultAuthRoleName(config)
 		if err != nil {
-			log.Info().Msgf("Unable to infer SA Name: %v\n", err)
+			log.Info().Err(err).Msg("Unable to infer SA Name")
 		} else {
 			config.VaultAuthRoleName = saName
 		}
@@ -66,7 +66,7 @@ func InferK8SConfig(config *cfg.Config) {
 	if config.K8SAuthMount == "kubernetes" {
 		vaultAuthMount, err := inferVaultAuthMount()
 		if err != nil {
-			log.Info().Msgf("Unable to infer K8S Vault Auth Mount: %v\n", err)
+			log.Info().Err(err).Msg("Unable to infer K8S Vault Auth Mount")
 		} else {
 			config.K8SAuthMount = vaultAuthMount
 		}

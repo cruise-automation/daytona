@@ -20,11 +20,11 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"github.com/rs/zerolog/log"
 	"strings"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // CertFetcher is responsible for fetching certificates & keys..
@@ -54,11 +54,11 @@ func CertFetcher(client *api.Client, config cfg.Config) {
 	path := config.PkiIssuer + "/issue/" + config.PkiRole
 	resp, err := client.Logical().Write(path, cnData)
 	if err != nil {
-		log.Panic().Msgf("Error requesting cert from Vault: %s", err)
+		log.Panic().Err(err).Msg("Error requesting cert from Vault")
 	}
 	err = writeCertData(resp, config.PkiCertificate, config.PkiPrivateKey, config.PkiUseCaChain)
 	if err != nil {
-		log.Panic().Msgf("Error while writing cert data: %s", err)
+		log.Panic().Err(err).Msg("Error while writing cert data")
 	}
 }
 

@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"io/ioutil"
 	"os"
 	"path"
@@ -28,6 +27,7 @@ import (
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -104,7 +104,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 
 		if config.SecretPayloadPath == "" && !config.SecretEnv {
 			if def.outputDestination == "" {
-				log.Info().Msgf("No secret output method was configured for %s, will not attempt to retrieve secrets for this defintion", def.envkey)
+				log.Info().Str("envKey", def.envkey).Msg("No secret output method was configured, will not attempt to retrieve secrets for this defintion")
 				continue
 			}
 		}
@@ -112,7 +112,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		if def.plural {
 			err := def.Walk(client)
 			if err != nil {
-				log.Fatal().Err(err).Msg("")
+				log.Fatal().Err(err).Msg("Could not iterate on the provided apex path")
 			}
 		}
 
@@ -122,12 +122,12 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		for range def.paths {
 			secretResult := parallelReader.ReadSecretResult()
 			if secretResult.Err != nil {
-				log.Fatal().Err(secretResult.Err).Msg("")
+				log.Fatal().Err(secretResult.Err).Msg("Could not to read secret result")
 			}
 
 			err := def.addSecrets(client, secretResult)
 			if err != nil {
-				log.Fatal().Err(err).Msg("")
+				log.Fatal().Err(err).Msg("Could not add secrets to the definition")
 			}
 		}
 
@@ -147,7 +147,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		if config.SecretPayloadPath != "" {
 			err := writeJSONSecrets(def.secrets, config.SecretPayloadPath)
 			if err != nil {
-				log.Fatal().Err(err).Msg("")
+				log.Fatal().Err(err).Msg("Could not write JSON secrets")
 			}
 		}
 	}
@@ -165,7 +165,7 @@ func writeSecretsToDestination(def *SecretDefinition) error {
 			if err != nil {
 				return fmt.Errorf("could not write secrets to file '%s': %s", def.outputDestination, err)
 			}
-			log.Info().Msgf("Wrote secret to %s\n", def.outputDestination)
+			log.Info().Str("outputDestination", def.outputDestination).Msg("Wrote secret")
 		}
 	}
 	return nil
@@ -180,7 +180,7 @@ func writeJSONSecrets(secrets map[string]string, filepath string) error {
 	if err != nil {
 		return fmt.Errorf("could not write secrets to file '%s': %s", filepath, err)
 	}
-	log.Info().Msgf("Wrote %d secrets to %s\n", len(secrets), filepath)
+	log.Info().Int("count", len(secrets)).Str("path", filepath).Msg("Wrote secrets")
 	return nil
 }
 
@@ -190,7 +190,7 @@ func setEnvSecrets(secrets map[string]string) error {
 		if err != nil {
 			return fmt.Errorf("Error from os.Setenv: %s", err)
 		}
-		log.Info().Msgf("Set env var: %s\n", k)
+		log.Info().Str("var", k).Msg("Set env var")
 	}
 	return nil
 }
@@ -202,10 +202,10 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 
 	_, keyName := path.Split(keyPath)
 	if err != nil {
-		log.Fatal().Msgf("Failed retrieving secret %s: %s\n", keyPath, err)
+		log.Fatal().Err(err).Str("path", keyPath).Msg("Failed retrieving secret")
 	}
 	if secret == nil {
-		log.Fatal().Msgf("Vault listed a secret '%s', but got not-found trying to read it at '%s'; very strange\n", keyName, keyPath)
+		log.Fatal().Str("secret", keyName).Str("path", keyPath).Msg("Vault listed a secret, but got not-found trying to read it; very strange")
 	}
 	secretData := secret.Data
 
@@ -217,7 +217,7 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 		v, ok := secretData[singleValueKey]
 		if ok {
 			sd.secrets[singleValueKey] = v.(string)
-			log.Info().Msgf("Found an explicit vault value key %s, will only read value %s\n", secretValueKeyPrefix+sd.secretID, singleValueKey)
+			log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will only read value")
 			return nil
 		}
 	}
@@ -260,7 +260,7 @@ func (sd *SecretDefinition) Walk(client *api.Client) error {
 		if !strings.HasSuffix(key, "/") {
 			paths = append(paths, path.Join(sd.secretApex, key))
 		} else {
-			log.Info().Msgf("Found subpath %s while walking %s - only top-level path iteration is supported at this time\n", key, sd.secretApex)
+			log.Info().Str("subpath", key).Str("secretApex", sd.secretApex).Msg("Found subpath while walking - only top-level path iteration is supported at this time")
 		}
 	}
 	sd.paths = paths

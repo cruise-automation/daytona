@@ -19,7 +19,6 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"io/ioutil"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/cruise-automation/daytona/pkg/config"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // Authenticator is an interface to represent an external
@@ -48,13 +48,13 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 	}
 
 	if vaultToken == "" {
-		log.Info().Msgf("something weird happened, should have had the token, but do not")
+		log.Info().Msg("something weird happened, should have had the token, but do not")
 		return false
 	}
 
 	err = ioutil.WriteFile(config.TokenPath, []byte(vaultToken), 0600)
 	if err != nil {
-		log.Info().Msgf("could not write token to %s: %v\n", config.TokenPath, err)
+		log.Info().Err(err).Str("tokenPath", config.TokenPath).Msg("could not write token")
 		return false
 	}
 	client.SetToken(vaultToken)
@@ -88,14 +88,14 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 		return true
 	}
 
-	log.Info().Msgf("No token found in %q, trying to re-authenticate\n", config.TokenPath)
+	log.Info().Str("tokenPath", config.TokenPath).Msg("No token found, trying to re-authenticate")
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 15
 	if config.InfiniteAuth {
 		log.Info().Msg("Infinite authentication enabled.")
 		bo.MaxElapsedTime = 0
 	} else {
-		log.Info().Msgf("Authentication will be attempted for %d seconds.\n", config.MaximumAuthRetry)
+		log.Info().Int64("maxRetry", config.MaximumAuthRetry).Msg("Authentication will be attempted until max retry reached")
 		bo.MaxElapsedTime = time.Second * time.Duration(config.MaximumAuthRetry)
 	}
 
@@ -145,7 +145,7 @@ func checkToken(client *api.Client) bool {
 func checkFileToken(client *api.Client, tokenPath string) bool {
 	fileToken, err := ioutil.ReadFile(tokenPath)
 	if err != nil {
-		log.Info().Msgf("Can't read an existing token at %q.\n", tokenPath)
+		log.Info().Str("tokenPath", tokenPath).Msg("Can't read an existing token")
 		return false
 	}
 	log.Info().Str("tokenPath", tokenPath).Msg("Found an existing token")
@@ -181,7 +181,7 @@ func RenewService(client *api.Client, config cfg.Config) {
 				log.Fatal().Str("tokenPath", config.TokenPath).Err(err).Msg("Could not write token to file")
 			}
 		} else {
-			log.Info().Msgf("Existing token ttl of %d seconds is still above the threshold (%d), skipping renewal", int64(ttl.Seconds()), config.RenewalThreshold)
+			log.Info().Dur("tokenTTL", ttl).Int64("renewalThreshold", config.RenewalThreshold).Msg("Existing token ttl is still above the threshold, skipping renewal")
 		}
 		<-ticker
 	}

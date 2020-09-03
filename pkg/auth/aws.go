@@ -20,13 +20,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
-	"github.com/rs/zerolog/log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // AWSService is an external service that vault can authenticate requests against
