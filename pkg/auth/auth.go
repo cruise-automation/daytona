@@ -19,8 +19,8 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"github.com/rs/zerolog/log"
+	"io/ioutil"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -43,7 +43,7 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 
 	vaultToken, err = svc.Auth(client, config)
 	if err != nil {
-		log.Info().Msg(err)
+		log.Info().Err(err).Msg("Fail to retrieve vault token")
 		return false
 	}
 
@@ -132,7 +132,7 @@ func checkToken(client *api.Client) bool {
 	// Check the validity of the token.  If from disk, it could be expired.
 	_, err := client.Auth().Token().LookupSelf()
 	if err != nil {
-		log.Info().Msg("Invalid token: ", err)
+		log.Info().Err(err).Msg("Invalid token")
 		client.ClearToken()
 		return false
 	}
@@ -148,7 +148,7 @@ func checkFileToken(client *api.Client, tokenPath string) bool {
 		log.Info().Msgf("Can't read an existing token at %q.\n", tokenPath)
 		return false
 	}
-	log.Info().Msg("Found an existing token at", tokenPath)
+	log.Info().Str("tokenPath", tokenPath).Msg("Found an existing token")
 	client.SetToken(string(fileToken))
 
 	return checkToken(client)
@@ -157,28 +157,28 @@ func checkFileToken(client *api.Client, tokenPath string) bool {
 // RenewService is responsible for renewing a vault token as it ttl approaches a threshold
 func RenewService(client *api.Client, config cfg.Config) {
 	interval := time.Second * time.Duration(config.RenewalInterval)
-	log.Info().Msg("Starting the token renewer service on interval", interval)
+	log.Info().Dur("interval", interval).Msg("Starting the token renewer service")
 	ticker := time.Tick(interval)
 	for {
 		result, err := client.Auth().Token().LookupSelf()
 		if err != nil {
-			log.Fatal().Msg("The existing token failed renewal:", err)
+			log.Fatal().Err(err).Msg("The existing token failed renewal")
 		}
 		ttl, err := result.TokenTTL()
 		if err != nil {
-			log.Fatal().Msg("Failed to parse the token's ttl from JSON:", err)
+			log.Fatal().Err(err).Msg("Failed to parse the token's ttl from JSON")
 		}
 
 		if ttl.Seconds() < float64(config.RenewalThreshold) {
 			fmt.Println("token ttl of", ttl.Seconds(), "is below threshold of", config.RenewalThreshold, ", renewing to", config.RenewalIncrement)
 			secret, err := client.Auth().Token().RenewSelf(int(config.RenewalIncrement))
 			if err != nil {
-				log.Fatal().Msg("Failed to renew the existing token: ", err)
+				log.Fatal().Err(err).Msg("Failed to renew the existing token")
 			}
 			client.SetToken(secret.Auth.ClientToken)
 			err = ioutil.WriteFile(config.TokenPath, []byte(secret.Auth.ClientToken), 0600)
 			if err != nil {
-				log.Fatal().Msg("Could not write token to file", config.TokenPath, err.Error())
+				log.Fatal().Str("tokenPath", config.TokenPath).Err(err).Msg("Could not write token to file")
 			}
 		} else {
 			log.Info().Msgf("Existing token ttl of %d seconds is still above the threshold (%d), skipping renewal", int64(ttl.Seconds()), config.RenewalThreshold)

@@ -162,7 +162,7 @@ func main() {
 
 	fullTokenPath, err := homedir.Expand(config.TokenPath)
 	if err != nil {
-		log.Info().Msg("Could not expand", config.TokenPath, "using it as-is")
+		log.Info().Str("tokenPath", config.TokenPath).Msg("Could not expand token path using it as-is")
 	} else {
 		config.TokenPath = fullTokenPath
 	}
@@ -211,7 +211,7 @@ func main() {
 		if len(args) == 0 {
 			log.Fatal().Msg("No arguments detected with use of -entrypoint")
 		}
-		log.Info().Msg("Will exec: ", args)
+		log.Info().Strs("args", args).Msg("Will exec")
 		binary, err := exec.LookPath(args[0])
 		if err != nil {
 			log.Fatal().Msgf("Error finding '%s' to exec: %s\n", args[0], err)

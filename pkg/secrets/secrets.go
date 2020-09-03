@@ -20,8 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"github.com/rs/zerolog/log"
+	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -112,7 +112,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		if def.plural {
 			err := def.Walk(client)
 			if err != nil {
-				log.Fatal().Msg(err)
+				log.Fatal().Err(err).Msg("")
 			}
 		}
 
@@ -122,12 +122,12 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		for range def.paths {
 			secretResult := parallelReader.ReadSecretResult()
 			if secretResult.Err != nil {
-				log.Fatal().Msg(secretResult.Err)
+				log.Fatal().Err(secretResult.Err).Msg("")
 			}
 
 			err := def.addSecrets(client, secretResult)
 			if err != nil {
-				log.Fatal().Msg(err)
+				log.Fatal().Err(err).Msg("")
 			}
 		}
 
@@ -147,7 +147,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		if config.SecretPayloadPath != "" {
 			err := writeJSONSecrets(def.secrets, config.SecretPayloadPath)
 			if err != nil {
-				log.Fatal().Msg(err)
+				log.Fatal().Err(err).Msg("")
 			}
 		}
 	}
@@ -246,7 +246,7 @@ func (sd *SecretDefinition) Walk(client *api.Client) error {
 	if list == nil || len(list.Data) == 0 {
 		return fmt.Errorf("no secrets found under: %s", sd.secretApex)
 	}
-	log.Info().Msg("Starting iteration on", sd.secretApex)
+	log.Info().Str("secretApex", sd.secretApex).Msg("Starting iteration")
 	// list.Data is like: map[string]interface {}{"keys":[]interface {}{"API_KEY", "APPLICATION_KEY", "DB_PASS"}}
 	keys, ok := list.Data["keys"].([]interface{})
 	if !ok {
