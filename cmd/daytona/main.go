@@ -166,7 +166,7 @@ func main() {
 	}
 
 	if err := config.ValidateConfig(); err != nil {
-		log.Fatal().Msg(err.Error())
+		log.Fatal().Err(err).Msg("Invalid configuration")
 	}
 
 	fullTokenPath, err := homedir.Expand(config.TokenPath)
