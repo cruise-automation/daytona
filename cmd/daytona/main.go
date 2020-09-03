@@ -139,7 +139,6 @@ func init() {
 }
 
 func main() {
-	log.SetPrefix("DAYTONA - ")
 	log.Info().Msgf("Starting %s...\n", version)
 	flag.Parse()
 
