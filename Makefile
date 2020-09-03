@@ -36,9 +36,9 @@ test:
 
 %_codecoverage:
 	go test -cover -count=1 -coverprofile=$* -v ${PACKAGES}
-	go tool cover -html=$*
 
 coverage: ${COVERAGES}
+	go tool cover -html=coverage.out
 
 lint:
 	go vet ${PACKAGES}
