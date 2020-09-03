@@ -8,12 +8,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const envLogLevel = "LOG_LEVEL"
+const EnvLevel = "LOG_LEVEL"
 
 type Config struct {
+	Structured     bool
 	Level          Level
 	LevelFieldName string
-	Structured     bool
 }
 
 type Level struct {
@@ -21,10 +21,10 @@ type Level struct {
 }
 
 // Set the level using level or LOG_LEVEL environment variable
-// return an error if the level cannot be parsed
+// return an error if the level cannot be parsed.
 func (l *Level) Set(level string) error {
 	if level == "" {
-		level = os.Getenv(envLogLevel)
+		level = os.Getenv(EnvLevel)
 	}
 
 	var err error
@@ -33,12 +33,13 @@ func (l *Level) Set(level string) error {
 	return err
 }
 
-// Setup the logging level, level field name and output (JSON or console)
+// Setup the logging level, level field name and output (JSON or console).
 func Setup(cfg Config) {
 	zerolog.SetGlobalLevel(cfg.Level.Level)
 	zerolog.LevelFieldName = cfg.LevelFieldName
 
 	var writer io.Writer = os.Stderr
+
 	if !cfg.Structured {
 		cslWriter := zerolog.NewConsoleWriter()
 		cslWriter.NoColor = true

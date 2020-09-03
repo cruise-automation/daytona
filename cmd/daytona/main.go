@@ -138,7 +138,7 @@ func init() {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("PKI_USE_CA_CHAIN", "false"))
 		return err == nil && b
 	}(), "if set, retrieve the CA chain and include it in the certificate file output (env: PKI_USE_CA_CHAIN)")
-	flag.Var(&config.Log.Level, "log-level", "defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: LOG_LEVEL)")
+	flag.Var(&config.Log.Level, "log-level", "defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: "+logging.EnvLevel+")")
 	flag.StringVar(&config.Log.LevelFieldName, "log-level-field-name", cfg.BuildDefaultConfigItem("LOG_LEVEL_FIELD_NAME", zerolog.LevelFieldName), " the field name used for the level field (env: LOG_LEVEL_FIELD_NAME)")
 	flag.BoolVar(&config.Log.Structured, "log-structured", func() bool {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("LOG_STRUCTURED", "false"))

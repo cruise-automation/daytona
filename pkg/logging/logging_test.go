@@ -1,9 +1,10 @@
-package logging
+package logging_test
 
 import (
 	"os"
 	"testing"
 
+	. "github.com/cruise-automation/daytona/pkg/logging"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,6 +13,7 @@ func TestLevelSet(t *testing.T) {
 		trace = "trace"
 		panic = "panic"
 	)
+
 	level := new(Level)
 
 	assert.Error(t, level.Set("notAValidLevel"))
@@ -19,10 +21,10 @@ func TestLevelSet(t *testing.T) {
 	assert.NoError(t, level.Set(panic))
 	assert.Equal(t, level.String(), panic)
 
-	assert.NoError(t, os.Setenv(envLogLevel, trace))
+	assert.NoError(t, os.Setenv(EnvLevel, trace))
 	assert.NoError(t, level.Set(""))
 	assert.Equal(t, level.String(), trace)
-	assert.NoError(t, os.Unsetenv(envLogLevel))
+	assert.NoError(t, os.Unsetenv(EnvLevel))
 }
 
 func TestSetup(t *testing.T) {
