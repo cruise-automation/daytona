@@ -119,11 +119,11 @@ func init() {
 	flag.IntVar(&config.Workers, "workers", func() int {
 		b, err := strconv.ParseInt(cfg.BuildDefaultConfigItem("WORKERS", "1"), 10, 64)
 		if err != nil {
-			log.Fatal("WORKERS environment variable must be a valid value")
+			log.Fatal().Msg("WORKERS environment variable must be a valid value")
 		}
 
 		if b < 1 || b > 5 {
-			log.Fatal("-workers must be greater than zero and less than 5")
+			log.Fatal().Msg("-workers must be greater than zero and less than 5")
 		}
 		return int(b)
 	}(), "how many workers to run to read secrets in parallel (env: WORKERS) (Max: 5)")
