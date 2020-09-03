@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"github.com/rs/zerolog/log"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/briankassouf/jose/jws"

@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"github.com/rs/zerolog/log"
 	"strings"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"

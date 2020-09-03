@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"github.com/rs/zerolog/log"
 	"time"
 
 	"github.com/cenkalti/backoff"

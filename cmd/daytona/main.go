@@ -18,7 +18,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"
 	"os/signal"

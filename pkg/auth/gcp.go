@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"github.com/rs/zerolog/log"
 	"time"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
