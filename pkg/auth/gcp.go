@@ -36,7 +36,7 @@ type GCPService struct{}
 
 // Auth is used to authenticate to the service
 func (g *GCPService) Auth(client *api.Client, config cfg.Config) (string, error) {
-	log.Println("attempting gcp iam auth..")
+	log.Info().Msg("attempting gcp iam auth..")
 	if config.GCPServiceAccount == "" {
 		return "", errors.New("-gcp-svc-acct is missing")
 	}

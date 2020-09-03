@@ -54,7 +54,7 @@ type SecretDefinition struct {
 // define secret definitions. The variables are used to guide
 // the SecretFetcher in acquring and outputting the specified secrets
 func SecretFetcher(client *api.Client, config cfg.Config) {
-	log.Println("Starting secret fetch")
+	log.Info().Msg("Starting secret fetch")
 
 	defs := make([]*SecretDefinition, 0)
 
@@ -246,7 +246,7 @@ func (sd *SecretDefinition) Walk(client *api.Client) error {
 	if list == nil || len(list.Data) == 0 {
 		return fmt.Errorf("no secrets found under: %s", sd.secretApex)
 	}
-	log.Println("Starting iteration on", sd.secretApex)
+	log.Info().Msg("Starting iteration on", sd.secretApex)
 	// list.Data is like: map[string]interface {}{"keys":[]interface {}{"API_KEY", "APPLICATION_KEY", "DB_PASS"}}
 	keys, ok := list.Data["keys"].([]interface{})
 	if !ok {

@@ -163,12 +163,12 @@ func main() {
 
 	fullTokenPath, err := homedir.Expand(config.TokenPath)
 	if err != nil {
-		log.Println("Could not expand", config.TokenPath, "using it as-is")
+		log.Info().Msg("Could not expand", config.TokenPath, "using it as-is")
 	} else {
 		config.TokenPath = fullTokenPath
 	}
 	if f, err := os.Stat(config.TokenPath); err == nil && f.IsDir() {
-		log.Println("The provided token path is a directory, automatically appending .vault-token filename")
+		log.Info().Msg("The provided token path is a directory, automatically appending .vault-token filename")
 		config.TokenPath = filepath.Join(config.TokenPath, ".vault-token")
 	}
 
@@ -212,7 +212,7 @@ func main() {
 		if len(args) == 0 {
 			log.Fatalln("No arguments detected with use of -entrypoint")
 		}
-		log.Println("Will exec: ", args)
+		log.Info().Msg("Will exec: ", args)
 		binary, err := exec.LookPath(args[0])
 		if err != nil {
 			log.Fatalf("Error finding '%s' to exec: %s\n", args[0], err)

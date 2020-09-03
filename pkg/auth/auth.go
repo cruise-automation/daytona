@@ -43,7 +43,7 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 
 	vaultToken, err = svc.Auth(client, config)
 	if err != nil {
-		log.Println(err)
+		log.Info().Msg(err)
 		return false
 	}
 
@@ -78,12 +78,12 @@ func fetchVaultToken(client *api.Client, config cfg.Config, loginData map[string
 func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 	// Vault Go API will read a token from VAULT_TOKEN if it exists.
 	// If it didn't find one, attempt to read token from disk.
-	log.Println("Checking for an existing, valid vault token")
+	log.Info().Msg("Checking for an existing, valid vault token")
 	if checkToken(client) {
 		return true
 	}
 
-	log.Println("No token found in VAULT_TOKEN env, checking path")
+	log.Info().Msg("No token found in VAULT_TOKEN env, checking path")
 	if checkFileToken(client, config.TokenPath) {
 		return true
 	}
@@ -92,7 +92,7 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 15
 	if config.InfiniteAuth {
-		log.Println("Infinite authentication enabled.")
+		log.Info().Msg("Infinite authentication enabled.")
 		bo.MaxElapsedTime = 0
 	} else {
 		log.Info().Msgf("Authentication will be attempted for %d seconds.\n", config.MaximumAuthRetry)
@@ -113,9 +113,9 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 
 	authTicker := backoff.NewTicker(bo)
 	for range authTicker.C {
-		log.Println("Attempting to authenticate")
+		log.Info().Msg("Attempting to authenticate")
 		if authenticate(client, config, svc) {
-			log.Println("Authentication succeeded.")
+			log.Info().Msg("Authentication succeeded.")
 			return true
 		}
 	}
@@ -132,7 +132,7 @@ func checkToken(client *api.Client) bool {
 	// Check the validity of the token.  If from disk, it could be expired.
 	_, err := client.Auth().Token().LookupSelf()
 	if err != nil {
-		log.Println("Invalid token: ", err)
+		log.Info().Msg("Invalid token: ", err)
 		client.ClearToken()
 		return false
 	}
@@ -148,7 +148,7 @@ func checkFileToken(client *api.Client, tokenPath string) bool {
 		log.Info().Msgf("Can't read an existing token at %q.\n", tokenPath)
 		return false
 	}
-	log.Println("Found an existing token at", tokenPath)
+	log.Info().Msg("Found an existing token at", tokenPath)
 	client.SetToken(string(fileToken))
 
 	return checkToken(client)
@@ -157,7 +157,7 @@ func checkFileToken(client *api.Client, tokenPath string) bool {
 // RenewService is responsible for renewing a vault token as it ttl approaches a threshold
 func RenewService(client *api.Client, config cfg.Config) {
 	interval := time.Second * time.Duration(config.RenewalInterval)
-	log.Println("Starting the token renewer service on interval", interval)
+	log.Info().Msg("Starting the token renewer service on interval", interval)
 	ticker := time.Tick(interval)
 	for {
 		result, err := client.Auth().Token().LookupSelf()

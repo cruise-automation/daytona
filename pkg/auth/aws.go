@@ -34,7 +34,7 @@ type AWSService struct{}
 
 // Auth is used to authenticate to an external service
 func (a *AWSService) Auth(client *api.Client, config cfg.Config) (string, error) {
-	log.Println("attempting aws iam auth..")
+	log.Info().Msg("attempting aws iam auth..")
 	loginData := make(map[string]interface{})
 	stsSession, err := session.NewSession(&aws.Config{
 		MaxRetries: aws.Int(5),
