@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+
+	"github.com/cruise-automation/daytona/pkg/logging"
 )
 
 const authPathFmtString = "auth/%s/login"
@@ -38,6 +40,7 @@ type Config struct {
 	PkiPrivateKey     string
 	PkiCertificate    string
 	PkiUseCaChain     bool
+	Log               logging.Config
 }
 
 // BuildDefaultConfigItem uses the following operation: ENV --> arg

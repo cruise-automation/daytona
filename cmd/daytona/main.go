@@ -27,10 +27,12 @@ import (
 
 	"github.com/cruise-automation/daytona/pkg/auth"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
+	"github.com/cruise-automation/daytona/pkg/logging"
 	"github.com/cruise-automation/daytona/pkg/pki"
 	"github.com/cruise-automation/daytona/pkg/secrets"
 	"github.com/hashicorp/vault/api"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -136,11 +138,18 @@ func init() {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("PKI_USE_CA_CHAIN", "false"))
 		return err == nil && b
 	}(), "if set, retrieve the CA chain and include it in the certificate file output (env: PKI_USE_CA_CHAIN)")
+	flag.Var(&config.Log.Level, "log-level", "defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: LOG_LEVEL)")
+	flag.StringVar(&config.Log.LevelFieldName, "log-level-field-name", cfg.BuildDefaultConfigItem("LOG_LEVEL_FIELD_NAME", zerolog.LevelFieldName), " the field name used for the level field (env: LOG_LEVEL_FIELD_NAME)")
+	flag.BoolVar(&config.Log.Structured, "log-structured", func() bool {
+		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("LOG_STRUCTURED", "false"))
+		return err == nil && b
+	}(), "if set, log output will be JSON else writes human-friendly format (env: LOG_STRUCTURED)")
 }
 
 func main() {
-	log.Info().Str("version", version).Msg("Starting ...")
 	flag.Parse()
+	logging.Setup(config.Log)
+	log.Info().Str("version", version).Msg("Starting ...")
 
 	if !config.ValidateAuthType() {
 		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth}).Msg("You must provide an auth method")
