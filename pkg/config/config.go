@@ -143,9 +143,9 @@ func DefaultConfig() Config {
 	return config
 }
 
-// ValidateAuthType validates that the user has supplied
+// validateAuthType validates that the user has supplied
 // a valid authentication type
-func (c *Config) ValidateAuthType() bool {
+func (c *Config) validateAuthType() bool {
 	p := 0
 	for _, v := range []bool{c.K8SAuth, c.AWSAuth, c.GCPAuth} {
 		if v {
@@ -158,9 +158,9 @@ func (c *Config) ValidateAuthType() bool {
 	return true
 }
 
-// ValidateConfig attempts to perform some generic
+// validateConfig attempts to perform some generic
 // configuration validation
-func (c *Config) ValidateConfig() error {
+func (c *Config) validateConfig() error {
 	if c.VaultAuthRoleName == "" {
 		return errors.New("You must supply a role name via VAULT_AUTH_ROLE or -vault-auth-role")
 	}
@@ -248,13 +248,13 @@ func (c *Config) ValidateAndBuild() error {
 		return errors.New("-workers must be greater than zero and less than 5")
 	}
 
-	if !c.ValidateAuthType() {
+	if !c.validateAuthType() {
 		return fmt.Errorf("You must provide an auth method: -%s or -%s or -%s\n", FlagK8SAuth, FlagAWSIAMAuth, FlagGCPAuth)
 	}
 
 	c.buildAuthMountPath()
 
-	if err := c.ValidateConfig(); err != nil {
+	if err := c.validateConfig(); err != nil {
 		return err
 	}
 
