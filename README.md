@@ -1,6 +1,6 @@
-[![Build CI](https://github.com/evelinfong/daytona/workflows/Build/badge.svg)](https://github.com/evelinfong/daytona/actions?query=workflow%3ABuild+branch%3Amaster)
-[![Docker CI](https://github.com/evelinfong/daytona/workflows/Docker/badge.svg)](https://github.com/evelinfong/daytona/actions?query=workflow%3ADocker+branch%3Amaster)
-[![codecov](https://codecov.io/gh/evelinfong/daytona/branch/master/graph/badge.svg)](https://codecov.io/gh/evelinfong/daytona)
+[![Build CI](https://github.com/cruise-automation/daytona/workflows/Build/badge.svg)](https://github.com/cruise-automation/daytona/actions?query=workflow%3ABuild+branch%3Amaster)
+[![Docker CI](https://github.com/cruise-automation/daytona/workflows/Docker/badge.svg)](https://github.com/cruise-automation/daytona/actions?query=workflow%3ADocker+branch%3Amaster)
+[![codecov](https://codecov.io/gh/cruise-automation/daytona/branch/master/graph/badge.svg)](https://codecov.io/gh/cruise-automation/daytona)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cruise-automation/daytona)](https://goreportcard.com/report/github.com/cruise-automation/daytona)
 [![CodeFactor](https://www.codefactor.io/repository/github/cruise-automation/daytona/badge)](https://www.codefactor.io/repository/github/cruise-automation/daytona)
 
