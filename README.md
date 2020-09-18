@@ -462,6 +462,7 @@ Usage
 Usage of ./daytona:
   -address string
       Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied
+  -auth-mount string
   -auto-renew
       if enabled, starts the token renewal service (env: AUTO_RENEW)
   -aws-auth
@@ -486,6 +487,12 @@ Usage of ./daytona:
       the vault mount where k8s auth takes place (env: K8S_AUTH_MOUNT, note: will infer via k8s metadata api if left unset) (default "kubernetes")
   -k8s-token-path string
       kubernetes service account jtw token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
+  -log-level string
+      defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: LOG_LEVEL) (default "debug")
+  -log-level-field-name string
+      the field name used for the level field (env: LOG_LEVEL_FIELD_NAME) (default "level")
+  -log-structured
+      if set, log output will be JSON else writes human-friendly format (env: LOG_STRUCTURED) (default true)
   -max-auth-duration int
       the value, in seconds, for which DAYTONA should attempt to renew a token before exiting (env: MAX_AUTH_DURATION) (default 300)
   -pki-cert string
@@ -514,6 +521,8 @@ Usage of ./daytona:
       a full file path where a token will be read from/written to (env: TOKEN_PATH) (default "~/.vault-token")
   -vault-auth-role string
       the name of the role used for auth. used with either auth method (env: VAULT_AUTH_ROLE, note: will infer to k8s sa account name if left blank)
+  -workers int
+      how many workers to run to read secrets in parallel (env: WORKERS) (Max: 5) (default 1)
 ```
 
 #### Deployment
