@@ -12,30 +12,18 @@ const EnvLevel = "LOG_LEVEL"
 
 type Config struct {
 	Structured     bool
-	Level          Level
+	Level          string
 	LevelFieldName string
-}
-
-type Level struct {
-	zerolog.Level
-}
-
-// Set the level using level or LOG_LEVEL environment variable
-// return an error if the level cannot be parsed.
-func (l *Level) Set(level string) error {
-	if level == "" {
-		level = os.Getenv(EnvLevel)
-	}
-
-	var err error
-	l.Level, err = zerolog.ParseLevel(level)
-
-	return err
 }
 
 // Setup the logging level, level field name and output (JSON or console).
 func Setup(cfg Config) {
-	zerolog.SetGlobalLevel(cfg.Level.Level)
+	level, err := zerolog.ParseLevel(cfg.Level)
+	if err != nil {
+		level = zerolog.DebugLevel
+	}
+
+	zerolog.SetGlobalLevel(level)
 	zerolog.LevelFieldName = cfg.LevelFieldName
 
 	var writer io.Writer = os.Stderr
