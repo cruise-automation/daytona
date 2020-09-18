@@ -141,7 +141,7 @@ func init() {
 	flag.Var(&config.Log.Level, "log-level", "defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: "+logging.EnvLevel+")")
 	flag.StringVar(&config.Log.LevelFieldName, "log-level-field-name", cfg.BuildDefaultConfigItem("LOG_LEVEL_FIELD_NAME", zerolog.LevelFieldName), " the field name used for the level field (env: LOG_LEVEL_FIELD_NAME)")
 	flag.BoolVar(&config.Log.Structured, "log-structured", func() bool {
-		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("LOG_STRUCTURED", "false"))
+		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("LOG_STRUCTURED", "true"))
 		return err == nil && b
 	}(), "if set, log output will be JSON else writes human-friendly format (env: LOG_STRUCTURED)")
 }
