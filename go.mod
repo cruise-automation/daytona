@@ -13,6 +13,7 @@ require (
 	github.com/hashicorp/vault/api v1.0.5-0.20190909201928-35325e2c3262
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pierrec/lz4 v2.2.6+incompatible // indirect
+	github.com/rs/zerolog v1.19.0
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect

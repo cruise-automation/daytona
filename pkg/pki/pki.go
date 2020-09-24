@@ -20,20 +20,20 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strings"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // CertFetcher is responsible for fetching certificates & keys..
 func CertFetcher(client *api.Client, config cfg.Config) {
 	if config.PkiCertificate == "" || config.PkiPrivateKey == "" {
-		log.Println("Certificate or private key output path is empty, will not attempt to get certificate")
+		log.Info().Msg("Certificate or private key output path is empty, will not attempt to get certificate")
 		return
 	}
-	log.Println("Getting certificate from vault...")
+	log.Info().Msg("Getting certificate from vault...")
 
 	cnData := map[string]interface{}{}
 
@@ -54,11 +54,11 @@ func CertFetcher(client *api.Client, config cfg.Config) {
 	path := config.PkiIssuer + "/issue/" + config.PkiRole
 	resp, err := client.Logical().Write(path, cnData)
 	if err != nil {
-		log.Panicf("Error requesting cert from Vault: %s", err)
+		log.Panic().Err(err).Msg("Error requesting cert from Vault")
 	}
 	err = writeCertData(resp, config.PkiCertificate, config.PkiPrivateKey, config.PkiUseCaChain)
 	if err != nil {
-		log.Panicf("Error while writing cert data: %s", err)
+		log.Panic().Err(err).Msg("Error while writing cert data")
 	}
 }
 

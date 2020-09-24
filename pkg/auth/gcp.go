@@ -20,13 +20,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	iam "google.golang.org/api/iam/v1"
 )
@@ -36,7 +36,7 @@ type GCPService struct{}
 
 // Auth is used to authenticate to the service
 func (g *GCPService) Auth(client *api.Client, config cfg.Config) (string, error) {
-	log.Println("attempting gcp iam auth..")
+	log.Info().Msg("attempting gcp iam auth..")
 	if config.GCPServiceAccount == "" {
 		return "", errors.New("-gcp-svc-acct is missing")
 	}

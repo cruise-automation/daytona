@@ -20,12 +20,12 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/briankassouf/jose/jws"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // K8SService is an external service that vault can authenticate requests against
@@ -33,7 +33,7 @@ type K8SService struct{}
 
 // Auth is used to authenticate to an external service
 func (k *K8SService) Auth(client *api.Client, config cfg.Config) (string, error) {
-	log.Println("Attempting kubernetes auth..")
+	log.Info().Msg("Attempting kubernetes auth..")
 	if config.K8STokenPath == "" {
 		return "", fmt.Errorf("kubernetes auth token path is mssing")
 	}
@@ -52,11 +52,11 @@ func (k *K8SService) Auth(client *api.Client, config cfg.Config) (string, error)
 
 // InferK8SConfig attempts to replace default configuration parameters on K8S with ones inferred from the k8s environment
 func InferK8SConfig(config *cfg.Config) {
-	log.Println("Attempting to automatically infer some k8s configuration data")
+	log.Info().Msg("Attempting to automatically infer some k8s configuration data")
 	if config.VaultAuthRoleName == "" {
 		saName, err := inferVaultAuthRoleName(config)
 		if err != nil {
-			log.Printf("Unable to infer SA Name: %v\n", err)
+			log.Info().Err(err).Msg("Unable to infer SA Name")
 		} else {
 			config.VaultAuthRoleName = saName
 		}
@@ -66,7 +66,7 @@ func InferK8SConfig(config *cfg.Config) {
 	if config.K8SAuthMount == "kubernetes" {
 		vaultAuthMount, err := inferVaultAuthMount()
 		if err != nil {
-			log.Printf("Unable to infer K8S Vault Auth Mount: %v\n", err)
+			log.Info().Err(err).Msg("Unable to infer K8S Vault Auth Mount")
 		} else {
 			config.K8SAuthMount = vaultAuthMount
 		}

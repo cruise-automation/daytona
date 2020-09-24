@@ -20,13 +20,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/cruise-automation/daytona/pkg/config"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // Authenticator is an interface to represent an external
@@ -43,18 +43,18 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 
 	vaultToken, err = svc.Auth(client, config)
 	if err != nil {
-		log.Println(err)
+		log.Info().Err(err).Msg("Fail to retrieve vault token")
 		return false
 	}
 
 	if vaultToken == "" {
-		log.Printf("something weird happened, should have had the token, but do not")
+		log.Info().Msg("something weird happened, should have had the token, but do not")
 		return false
 	}
 
 	err = ioutil.WriteFile(config.TokenPath, []byte(vaultToken), 0600)
 	if err != nil {
-		log.Printf("could not write token to %s: %v\n", config.TokenPath, err)
+		log.Info().Err(err).Str("tokenPath", config.TokenPath).Msg("could not write token")
 		return false
 	}
 	client.SetToken(vaultToken)
@@ -78,24 +78,24 @@ func fetchVaultToken(client *api.Client, config cfg.Config, loginData map[string
 func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 	// Vault Go API will read a token from VAULT_TOKEN if it exists.
 	// If it didn't find one, attempt to read token from disk.
-	log.Println("Checking for an existing, valid vault token")
+	log.Info().Msg("Checking for an existing, valid vault token")
 	if checkToken(client) {
 		return true
 	}
 
-	log.Println("No token found in VAULT_TOKEN env, checking path")
+	log.Info().Msg("No token found in VAULT_TOKEN env, checking path")
 	if checkFileToken(client, config.TokenPath) {
 		return true
 	}
 
-	log.Printf("No token found in %q, trying to re-authenticate\n", config.TokenPath)
+	log.Info().Str("tokenPath", config.TokenPath).Msg("No token found, trying to re-authenticate")
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 15
 	if config.InfiniteAuth {
-		log.Println("Infinite authentication enabled.")
+		log.Info().Msg("Infinite authentication enabled.")
 		bo.MaxElapsedTime = 0
 	} else {
-		log.Printf("Authentication will be attempted for %d seconds.\n", config.MaximumAuthRetry)
+		log.Info().Int64("maxRetry", config.MaximumAuthRetry).Msg("Authentication will be attempted until max retry reached")
 		bo.MaxElapsedTime = time.Second * time.Duration(config.MaximumAuthRetry)
 	}
 
@@ -113,9 +113,9 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 
 	authTicker := backoff.NewTicker(bo)
 	for range authTicker.C {
-		log.Println("Attempting to authenticate")
+		log.Info().Msg("Attempting to authenticate")
 		if authenticate(client, config, svc) {
-			log.Println("Authentication succeeded.")
+			log.Info().Msg("Authentication succeeded.")
 			return true
 		}
 	}
@@ -132,7 +132,7 @@ func checkToken(client *api.Client) bool {
 	// Check the validity of the token.  If from disk, it could be expired.
 	_, err := client.Auth().Token().LookupSelf()
 	if err != nil {
-		log.Println("Invalid token: ", err)
+		log.Info().Err(err).Msg("Invalid token")
 		client.ClearToken()
 		return false
 	}
@@ -145,10 +145,10 @@ func checkToken(client *api.Client) bool {
 func checkFileToken(client *api.Client, tokenPath string) bool {
 	fileToken, err := ioutil.ReadFile(tokenPath)
 	if err != nil {
-		log.Printf("Can't read an existing token at %q.\n", tokenPath)
+		log.Info().Str("tokenPath", tokenPath).Msg("Can't read an existing token")
 		return false
 	}
-	log.Println("Found an existing token at", tokenPath)
+	log.Info().Str("tokenPath", tokenPath).Msg("Found an existing token")
 	client.SetToken(string(fileToken))
 
 	return checkToken(client)
@@ -157,31 +157,31 @@ func checkFileToken(client *api.Client, tokenPath string) bool {
 // RenewService is responsible for renewing a vault token as it ttl approaches a threshold
 func RenewService(client *api.Client, config cfg.Config) {
 	interval := time.Second * time.Duration(config.RenewalInterval)
-	log.Println("Starting the token renewer service on interval", interval)
+	log.Info().Dur("interval", interval).Msg("Starting the token renewer service")
 	ticker := time.Tick(interval)
 	for {
 		result, err := client.Auth().Token().LookupSelf()
 		if err != nil {
-			log.Fatalln("The existing token failed renewal:", err)
+			log.Fatal().Err(err).Msg("The existing token failed renewal")
 		}
 		ttl, err := result.TokenTTL()
 		if err != nil {
-			log.Fatalln("Failed to parse the token's ttl from JSON:", err)
+			log.Fatal().Err(err).Msg("Failed to parse the token's ttl from JSON")
 		}
 
 		if ttl.Seconds() < float64(config.RenewalThreshold) {
 			fmt.Println("token ttl of", ttl.Seconds(), "is below threshold of", config.RenewalThreshold, ", renewing to", config.RenewalIncrement)
 			secret, err := client.Auth().Token().RenewSelf(int(config.RenewalIncrement))
 			if err != nil {
-				log.Fatalln("Failed to renew the existing token: ", err)
+				log.Fatal().Err(err).Msg("Failed to renew the existing token")
 			}
 			client.SetToken(secret.Auth.ClientToken)
 			err = ioutil.WriteFile(config.TokenPath, []byte(secret.Auth.ClientToken), 0600)
 			if err != nil {
-				log.Fatalln("Could not write token to file", config.TokenPath, err.Error())
+				log.Fatal().Str("tokenPath", config.TokenPath).Err(err).Msg("Could not write token to file")
 			}
 		} else {
-			log.Printf("Existing token ttl of %d seconds is still above the threshold (%d), skipping renewal", int64(ttl.Seconds()), config.RenewalThreshold)
+			log.Info().Dur("tokenTTL", ttl).Int64("renewalThreshold", config.RenewalThreshold).Msg("Existing token ttl is still above the threshold, skipping renewal")
 		}
 		<-ticker
 	}
