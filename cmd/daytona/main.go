@@ -181,6 +181,10 @@ func main() {
 	}
 
 	vaultConfig := api.DefaultConfig()
+	// Set the MaxRetries for rate-limited requests to a higher default
+	if vaultConfig.MaxRetries == 2 {
+		vaultConfig.MaxRetries = 5
+	}
 	if config.VaultAddress != "" {
 		vaultConfig.Address = config.VaultAddress
 	}
