@@ -208,6 +208,9 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 		log.Fatal().Str("secret", keyName).Str("path", keyPath).Msg("Vault listed a secret, but got not-found trying to read it; very strange")
 	}
 	secretData := secret.Data
+	if secret.RequestID == "" && len(secretData) == 0 {
+		log.Fatal().Str("secret", keyName).Str("path", keyPath).Msg("Vault listed a secret, but failed trying to read it; likely the rate-limiting retry attempts were exceeded")
+	}
 
 	// Return last error encountered during processing, if any
 	var lastErr error
