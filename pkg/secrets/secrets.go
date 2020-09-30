@@ -119,20 +119,17 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		for _, path := range def.paths {
 			parallelReader.AsyncRequestKeyPath(path)
 		}
-		log.Info().Int("count", len(def.paths)).Msg("Reading secrets")
 		for range def.paths {
 			secretResult := parallelReader.ReadSecretResult()
 			if secretResult.Err != nil {
 				log.Fatal().Err(secretResult.Err).Msg("Could not to read secret result")
 			}
-			log.Info().Str("result", fmt.Sprintf("%+v", *secretResult.Secret)).Msg("secret result")
 
 			err := def.addSecrets(client, secretResult)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Could not add secrets to the definition")
 			}
 		}
-		log.Info().Int("count", len(def.secrets)).Msg("Secrets read")
 
 		defs = append(defs, def)
 	}
