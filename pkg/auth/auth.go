@@ -43,18 +43,18 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 
 	vaultToken, err = svc.Auth(client, config)
 	if err != nil {
-		log.Info().Err(err).Msg("Fail to retrieve vault token")
+		log.Error().Err(err).Msg("failed to retrieve vault token")
 		return false
 	}
 
 	if vaultToken == "" {
-		log.Info().Msg("something weird happened, should have had the token, but do not")
+		log.Error().Msg("something weird happened, should have had the token, but do not")
 		return false
 	}
 
 	err = ioutil.WriteFile(config.TokenPath, []byte(vaultToken), 0600)
 	if err != nil {
-		log.Info().Err(err).Str("tokenPath", config.TokenPath).Msg("could not write token")
+		log.Error().Err(err).Str("tokenPath", config.TokenPath).Msg("could not write token")
 		return false
 	}
 	client.SetToken(vaultToken)
@@ -132,7 +132,7 @@ func checkToken(client *api.Client) bool {
 	// Check the validity of the token.  If from disk, it could be expired.
 	_, err := client.Auth().Token().LookupSelf()
 	if err != nil {
-		log.Info().Err(err).Msg("Invalid token")
+		log.Warn().Err(err).Msg("Invalid token")
 		client.ClearToken()
 		return false
 	}
