@@ -171,12 +171,12 @@ func main() {
 
 	fullTokenPath, err := homedir.Expand(config.TokenPath)
 	if err != nil {
-		log.Info().Str("tokenPath", config.TokenPath).Msg("Could not expand token path using it as-is")
+		log.Warn().Str("tokenPath", config.TokenPath).Msg("Could not expand token path using it as-is")
 	} else {
 		config.TokenPath = fullTokenPath
 	}
 	if f, err := os.Stat(config.TokenPath); err == nil && f.IsDir() {
-		log.Info().Msg("The provided token path is a directory, automatically appending .vault-token filename")
+		log.Warn().Msg("The provided token path is a directory, automatically appending .vault-token filename")
 		config.TokenPath = filepath.Join(config.TokenPath, ".vault-token")
 	}
 

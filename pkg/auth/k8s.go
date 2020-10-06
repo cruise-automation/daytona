@@ -56,7 +56,7 @@ func InferK8SConfig(config *cfg.Config) {
 	if config.VaultAuthRoleName == "" {
 		saName, err := inferVaultAuthRoleName(config)
 		if err != nil {
-			log.Info().Err(err).Msg("Unable to infer SA Name")
+			log.Warn().Err(err).Msg("Unable to infer SA Name")
 		} else {
 			config.VaultAuthRoleName = saName
 		}
@@ -66,7 +66,7 @@ func InferK8SConfig(config *cfg.Config) {
 	if config.K8SAuthMount == "kubernetes" {
 		vaultAuthMount, err := inferVaultAuthMount()
 		if err != nil {
-			log.Info().Err(err).Msg("Unable to infer K8S Vault Auth Mount")
+			log.Warn().Err(err).Msg("Unable to infer K8S Vault Auth Mount")
 		} else {
 			config.K8SAuthMount = vaultAuthMount
 		}
