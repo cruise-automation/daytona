@@ -87,7 +87,7 @@ Result
 
 ---
 
-**Plurar Secrets**
+**Plural Secrets**
 
 Vault Data
 
@@ -119,7 +119,7 @@ DAYTONA_SECRET_DESTINATION_THING=/tmp/top-secret-many
 
 Result
 
-`/tmp/top-secret` would be populated with:
+`/tmp/top-secret-many` would be populated with:
 
 ```json
 {
