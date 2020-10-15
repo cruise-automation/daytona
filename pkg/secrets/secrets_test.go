@@ -461,3 +461,82 @@ func TestUnmatchedPluralDesintation(t *testing.T) {
 		assert.Equal(t, scenarios[i].expected, string(data))
 	}
 }
+
+func TestSecretPathAggregate(t *testing.T) {
+	var config cfg.Config
+
+	ts := httptest.NewTLSServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				fmt.Printf("here: %s", r.URL.Path)
+				switch {
+				case strings.HasPrefix(r.URL.Path, "/v1/secret/applicationa"):
+					q := r.URL.Query()
+					list := q.Get("list")
+					if list == "true" {
+						fmt.Fprintln(w, `{"data": {"keys": ["test1", "test2", "subpath/"]}}`)
+					} else {
+						if strings.HasSuffix(r.URL.Path, "test1") {
+							fmt.Fprintln(w, `{"data": {"value": "test1value"}}`)
+						}
+						if strings.HasSuffix(r.URL.Path, "test2") {
+							fmt.Fprintln(w, `{"data": {"value": "test2value"}}`)
+						}
+						if strings.HasSuffix(r.URL.Path, "subpath/") {
+							w.WriteHeader(404)
+							fmt.Fprintln(w, `{"errors": []}`)
+						}
+					}
+				case strings.HasPrefix(r.URL.Path, "/v1/secret/applicationb"):
+					fmt.Fprintln(w, `{"data": {"value": "old"}}`)
+				default:
+					w.WriteHeader(404)
+					fmt.Fprintln(w, `{"errors": []}`)
+				}
+			}))
+	defer ts.Close()
+
+	client, err := testhelpers.GetTestClient(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	os.Setenv("VAULT_SECRETS_APPLICATIONA", "secret/applicationa")
+	os.Setenv("VAULT_SECRET_APEX", "secret/applicationb/dannybrown")
+
+	defer os.Unsetenv("VAULT_SECRETS_APPLICATIONA")
+	defer os.Unsetenv("VAULT_SECRET_APEX")
+
+	config.SecretPayloadPath = file.Name()
+	config.Workers = 1
+	SecretFetcher(client, config)
+
+	secrets := make(map[string]string)
+	data, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = json.Unmarshal(data, &secrets)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	scenarios := []struct {
+		key      string
+		expected string
+	}{
+		{"test1", "test1value"},
+		{"test2", "test2value"},
+		{"dannybrown", "old"},
+	}
+
+	for i := range scenarios {
+		assert.Equal(t, scenarios[i].expected, secrets[scenarios[i].key])
+	}
+}

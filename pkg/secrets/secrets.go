@@ -132,6 +132,8 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		defs = append(defs, def)
 	}
 
+	secretPayloadPathOutput := make(map[string]string)
+
 	// output the secret definitions
 	for _, def := range defs {
 		if config.SecretEnv {
@@ -143,10 +145,17 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		}
 
 		if config.SecretPayloadPath != "" {
-			err := writeJSONSecrets(def.secrets, config.SecretPayloadPath)
-			if err != nil {
-				log.Fatal().Err(err).Msg("Could not write JSON secrets")
+			for k, v := range def.secrets {
+				secretPayloadPathOutput[k] = v
 			}
+		}
+	}
+
+	if config.SecretPayloadPath != "" {
+		log.Warn().Msg("secret path output functionality is planned for deprecation in version 2.0.0")
+		err := writeJSONSecrets(secretPayloadPathOutput, config.SecretPayloadPath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not write JSON secrets")
 		}
 	}
 
@@ -236,7 +245,7 @@ func valueConverter(value interface{}) (string, error) {
 }
 
 func writeFile(path string, data []byte) error {
-	err := ioutil.WriteFile(path, data, 0400)
+	err := ioutil.WriteFile(path, data, 0600)
 	if err != nil {
 		return err
 	}
