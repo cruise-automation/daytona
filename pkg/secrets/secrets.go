@@ -156,11 +156,11 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	// 		db_password
 	// 		api_key
 	// it has keys like:
-	// and configurated destinations like
+	// and configured destinations such as
 	// 	DAYTONA_SECRET_DESTINATION_db_password
 	//	DAYTONA_SECRET_DESTINATION_api_key
 	// or VAULT_SECRET_API_KEY = secret/yourapplication/api_key
-	// and configurated destinations like
+	// and configured destinations such as
 	//	DAYTONA_SECRET_DESTINATION_api_key
 	for destKey := range destinations {
 		for j := range defs {

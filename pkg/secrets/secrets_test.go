@@ -342,4 +342,122 @@ func TestValueConverter(t *testing.T) {
 	res, err = valueConverter([]string{"baz"})
 	assert.Equal(t, "", res)
 	assert.Error(t, err)
+
+}
+func TestUnmatchedSinularDesintation(t *testing.T) {
+	var config cfg.Config
+
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `
+		{
+			"auth": null,
+			"data": {
+			  "value": "shhhhh"
+			},
+			"lease_duration": 3600,
+			"lease_id": "",
+			"renewable": false
+		  }
+		`)
+	}))
+	defer ts.Close()
+
+	client, err := testhelpers.GetTestClient(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config.SecretPayloadPath = ""
+	file, err := ioutil.TempFile(os.TempDir(), "secret-destination-path")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(file.Name())
+
+	os.Setenv("VAULT_SECRET_APEX", "secret/applicationa")
+	os.Setenv("DAYTONA_SECRET_DESTINATION_applicationa", file.Name())
+	defer os.Unsetenv("VAULT_SECRET_APEX")
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_applicationa")
+
+	SecretFetcher(client, config)
+
+	data, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "shhhhh", string(data))
+}
+
+func TestUnmatchedPluralDesintation(t *testing.T) {
+	var config cfg.Config
+
+	ts := httptest.NewTLSServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				q := r.URL.Query()
+				list := q.Get("list")
+				if list == "true" {
+					fmt.Fprintln(w, `{"data": {"keys": ["tha", "jacka", "subpath/"]}}`)
+				} else {
+					if strings.HasSuffix(r.URL.Path, "tha") {
+						fmt.Fprintln(w, `{"data": {"value": "we"}}`)
+					}
+					if strings.HasSuffix(r.URL.Path, "jacka") {
+						fmt.Fprintln(w, `{"data": {"value": "mafia"}}`)
+					}
+					if strings.HasSuffix(r.URL.Path, "subpath/") {
+						w.WriteHeader(404)
+						fmt.Fprintln(w, `{"errors": []}`)
+					}
+				}
+			}))
+	defer ts.Close()
+
+	client, err := testhelpers.GetTestClient(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config.SecretPayloadPath = ""
+	f1, err := ioutil.TempFile(os.TempDir(), "secret-destination-path")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f2, err := ioutil.TempFile(os.TempDir(), "secret-destination-path")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(f1.Name())
+	defer os.Remove(f2.Name())
+
+	os.Setenv("VAULT_SECRETS_APEX", "secret/applicationa")
+	os.Setenv("DAYTONA_SECRET_DESTINATION_tha", f1.Name())
+	os.Setenv("DAYTONA_SECRET_DESTINATION_jacka", f2.Name())
+
+	defer os.Unsetenv("VAULT_SECRET_APEX")
+	defer os.Setenv("DAYTONA_SECRET_DESTINATION_tha", f1.Name())
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_jacka")
+
+	SecretFetcher(client, config)
+
+	scenarios := []struct {
+		file     string
+		expected string
+	}{
+		{f1.Name(), "we"},
+		{f2.Name(), "mafia"},
+	}
+
+	for i := range scenarios {
+		data, err := ioutil.ReadFile(scenarios[i].file)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		assert.Equal(t, scenarios[i].expected, string(data))
+	}
 }
