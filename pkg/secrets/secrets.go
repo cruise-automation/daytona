@@ -219,7 +219,7 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 	if singleValueKey != "" && !sd.plural {
 		v, ok := secretData[singleValueKey]
 		if ok {
-			sd.secrets[singleValueKey] = v.(string)
+			sd.secrets[singleValueKey] = fmt.Sprintf("%v", v)
 			log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will only read value")
 			return nil
 		}
@@ -228,10 +228,10 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 	for k, v := range secretData {
 		switch k {
 		case defaultKeyName:
-			sd.secrets[keyName] = v.(string)
+			sd.secrets[keyName] = fmt.Sprintf("%v", v)
 		default:
 			expandedKeyName := fmt.Sprintf("%s_%s", keyName, k)
-			sd.secrets[expandedKeyName] = v.(string)
+			sd.secrets[expandedKeyName] = fmt.Sprintf("%v", v)
 		}
 	}
 	return lastErr
