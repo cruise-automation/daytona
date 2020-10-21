@@ -234,12 +234,16 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 	}
 
 	for k, v := range secretData {
+		var err error
 		secretValue, ok := v.(string)
 		if !ok {
-			value, lastErr = json.Marshal(v)
+			value, err = json.Marshal(v)
+			if err != nil {
+				lastErr = err
+			}
 			secretValue = string(value)
 		}
-		if lastErr == nil {
+		if err == nil {
 			switch k {
 			case defaultKeyName:
 				sd.secrets[keyName] = secretValue
