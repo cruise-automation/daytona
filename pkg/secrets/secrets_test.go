@@ -315,12 +315,12 @@ func TestSecretAWalk(t *testing.T) {
 	assert.Equal(t, "xx", secrets["keys_api_key"])
 	assert.Equal(t, "aaaa", secrets["credentials_api_a"])
 	assert.Equal(t, "bbbb", secrets["credentials_api_b"])
-	assert.Equal(t, "map[bar:baz]", secrets["credentials_api_foo"])
+	assert.Equal(t, `{"bar":"baz"}`, secrets["credentials_api_foo"])
 	assert.Equal(t, "password", secrets["other"])
 
 	assert.Equal(t, "xx", destSecrets["keys_api_key"])
 	assert.Equal(t, "aaaa", destSecrets["credentials_api_a"])
 	assert.Equal(t, "bbbb", destSecrets["credentials_api_b"])
-	assert.Equal(t, "map[bar:baz]", destSecrets["credentials_api_foo"])
+	assert.Equal(t, `{"bar":"baz"}`, destSecrets["credentials_api_foo"])
 	assert.Equal(t, "password", destSecrets["other"])
 }

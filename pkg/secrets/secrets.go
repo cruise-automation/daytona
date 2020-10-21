@@ -214,24 +214,39 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 
 	// Return last error encountered during processing, if any
 	var lastErr error
+	var value []byte
 
 	singleValueKey := os.Getenv(secretValueKeyPrefix + sd.secretID)
 	if singleValueKey != "" && !sd.plural {
 		v, ok := secretData[singleValueKey]
 		if ok {
-			sd.secrets[singleValueKey] = fmt.Sprintf("%v", v)
-			log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will only read value")
-			return nil
+			secretValue, ok := v.(string)
+			if !ok {
+				value, lastErr = json.Marshal(v)
+				secretValue = string(value)
+			}
+			if lastErr == nil {
+				sd.secrets[singleValueKey] = secretValue
+				log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will only read value")
+			}
+			return lastErr
 		}
 	}
 
 	for k, v := range secretData {
-		switch k {
-		case defaultKeyName:
-			sd.secrets[keyName] = fmt.Sprintf("%v", v)
-		default:
-			expandedKeyName := fmt.Sprintf("%s_%s", keyName, k)
-			sd.secrets[expandedKeyName] = fmt.Sprintf("%v", v)
+		secretValue, ok := v.(string)
+		if !ok {
+			value, lastErr = json.Marshal(v)
+			secretValue = string(value)
+		}
+		if lastErr == nil {
+			switch k {
+			case defaultKeyName:
+				sd.secrets[keyName] = secretValue
+			default:
+				expandedKeyName := fmt.Sprintf("%s_%s", keyName, k)
+				sd.secrets[expandedKeyName] = secretValue
+			}
 		}
 	}
 	return lastErr
