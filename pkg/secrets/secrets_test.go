@@ -324,3 +324,22 @@ func TestSecretAWalk(t *testing.T) {
 	assert.Equal(t, `{"bar":"baz"}`, destSecrets["credentials_api_foo"])
 	assert.Equal(t, "password", destSecrets["other"])
 }
+
+func TestValueConverter(t *testing.T) {
+	const str = "A string"
+	res, err := valueConverter(str)
+	assert.Equal(t, str, res)
+	assert.NoError(t, err)
+
+	res, err = valueConverter(map[string]interface{}{"foo": "bar"})
+	assert.Equal(t, `{"foo":"bar"}`, res)
+	assert.NoError(t, err)
+
+	res, err = valueConverter(map[string]interface{}{"foo": make(chan struct{})})
+	assert.Equal(t, "", res)
+	assert.Error(t, err)
+
+	res, err = valueConverter([]string{"baz"})
+	assert.Equal(t, "", res)
+	assert.Error(t, err)
+}

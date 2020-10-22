@@ -195,6 +195,21 @@ func setEnvSecrets(secrets map[string]string) error {
 	return nil
 }
 
+func valueConverter(value interface{}) (string, error) {
+	switch v := value.(type) {
+	case string:
+		return v, nil
+	case map[string]interface{}:
+		val, err := json.Marshal(v)
+		if err != nil {
+			return "", err
+		}
+		return string(val), nil
+	default:
+		return "", fmt.Errorf("unsupported value type retrieved from vault: %T", v)
+	}
+}
+
 func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretResult) error {
 	keyPath := secretResult.KeyPath
 	secret := secretResult.Secret
@@ -214,17 +229,12 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 
 	// Return last error encountered during processing, if any
 	var lastErr error
-	var value []byte
 
 	singleValueKey := os.Getenv(secretValueKeyPrefix + sd.secretID)
 	if singleValueKey != "" && !sd.plural {
 		v, ok := secretData[singleValueKey]
 		if ok {
-			secretValue, ok := v.(string)
-			if !ok {
-				value, lastErr = json.Marshal(v)
-				secretValue = string(value)
-			}
+			secretValue, lastErr := valueConverter(v)
 			if lastErr == nil {
 				sd.secrets[singleValueKey] = secretValue
 				log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will only read value")
@@ -234,15 +244,7 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 	}
 
 	for k, v := range secretData {
-		var err error
-		secretValue, ok := v.(string)
-		if !ok {
-			value, err = json.Marshal(v)
-			if err != nil {
-				lastErr = err
-			}
-			secretValue = string(value)
-		}
+		secretValue, err := valueConverter(v)
 		if err == nil {
 			switch k {
 			case defaultKeyName:
@@ -251,6 +253,8 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 				expandedKeyName := fmt.Sprintf("%s_%s", keyName, k)
 				sd.secrets[expandedKeyName] = secretValue
 			}
+		} else {
+			lastErr = err
 		}
 	}
 	return lastErr
