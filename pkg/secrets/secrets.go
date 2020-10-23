@@ -227,37 +227,33 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 		log.Fatal().Str("secret", keyName).Str("path", keyPath).Msg("Vault listed a secret, but failed trying to read it; likely the rate-limiting retry attempts were exceeded")
 	}
 
-	// Return last error encountered during processing, if any
-	var lastErr error
-
 	singleValueKey := os.Getenv(secretValueKeyPrefix + sd.secretID)
 	if singleValueKey != "" && !sd.plural {
 		v, ok := secretData[singleValueKey]
 		if ok {
-			secretValue, lastErr := valueConverter(v)
-			if lastErr == nil {
+			secretValue, err := valueConverter(v)
+			if err == nil {
 				sd.secrets[singleValueKey] = secretValue
 				log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will only read value")
 			}
-			return lastErr
+			return err
 		}
 	}
 
 	for k, v := range secretData {
 		secretValue, err := valueConverter(v)
-		if err == nil {
-			switch k {
-			case defaultKeyName:
-				sd.secrets[keyName] = secretValue
-			default:
-				expandedKeyName := fmt.Sprintf("%s_%s", keyName, k)
-				sd.secrets[expandedKeyName] = secretValue
-			}
-		} else {
-			lastErr = err
+		if err != nil {
+			return fmt.Errorf("failed to convert %v: %w", k, err)
+		}
+		switch k {
+		case defaultKeyName:
+			sd.secrets[keyName] = secretValue
+		default:
+			expandedKeyName := fmt.Sprintf("%s_%s", keyName, k)
+			sd.secrets[expandedKeyName] = secretValue
 		}
 	}
-	return lastErr
+	return nil
 }
 
 // Walk walks a SecretDefintions SecretApex. This is used for iteration
