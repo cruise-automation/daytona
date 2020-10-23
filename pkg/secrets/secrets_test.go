@@ -254,7 +254,7 @@ func TestSecretAWalk(t *testing.T) {
 						fmt.Fprintln(w, `{"data": {"api_key": "xx"}}`)
 					}
 					if strings.HasSuffix(r.URL.Path, "credentials") {
-						fmt.Fprintln(w, `{"data": {"api_a": "aaaa", "api_b":"bbbb"}}`)
+						fmt.Fprintln(w, `{"data": {"api_a": "aaaa", "api_b":"bbbb", "api_foo": {"bar": "baz"}}}`)
 					}
 					if strings.HasSuffix(r.URL.Path, "other") {
 						fmt.Fprintln(w, `{"data": {"value": "password"}}`)
@@ -315,10 +315,31 @@ func TestSecretAWalk(t *testing.T) {
 	assert.Equal(t, "xx", secrets["keys_api_key"])
 	assert.Equal(t, "aaaa", secrets["credentials_api_a"])
 	assert.Equal(t, "bbbb", secrets["credentials_api_b"])
+	assert.Equal(t, `{"bar":"baz"}`, secrets["credentials_api_foo"])
 	assert.Equal(t, "password", secrets["other"])
 
 	assert.Equal(t, "xx", destSecrets["keys_api_key"])
 	assert.Equal(t, "aaaa", destSecrets["credentials_api_a"])
 	assert.Equal(t, "bbbb", destSecrets["credentials_api_b"])
+	assert.Equal(t, `{"bar":"baz"}`, destSecrets["credentials_api_foo"])
 	assert.Equal(t, "password", destSecrets["other"])
+}
+
+func TestValueConverter(t *testing.T) {
+	const str = "A string"
+	res, err := valueConverter(str)
+	assert.Equal(t, str, res)
+	assert.NoError(t, err)
+
+	res, err = valueConverter(map[string]interface{}{"foo": "bar"})
+	assert.Equal(t, `{"foo":"bar"}`, res)
+	assert.NoError(t, err)
+
+	res, err = valueConverter(map[string]interface{}{"foo": make(chan struct{})})
+	assert.Equal(t, "", res)
+	assert.Error(t, err)
+
+	res, err = valueConverter([]string{"baz"})
+	assert.Equal(t, "", res)
+	assert.Error(t, err)
 }
