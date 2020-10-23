@@ -57,11 +57,13 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	log.Info().Msg("Starting secret fetch")
 
 	defs := make([]*SecretDefinition, 0)
+	destinations := make(map[string]string)
 
 	ctx := context.Background()
 	parallelReader := NewParallelReader(ctx, client.Logical(), config.Workers)
 
 	envs := os.Environ()
+
 	// Find where all our secret keys are in vault
 	for _, env := range envs {
 		// VAULT_SECRET_WHATEVER=secret/application/thing
@@ -87,6 +89,9 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		case strings.HasPrefix(envKey, secretsStoragePathPrefix):
 			def.secretID = strings.TrimPrefix(envKey, secretsStoragePathPrefix)
 			def.plural = true
+		case strings.HasPrefix(envKey, secretDestinationPrefix):
+			destinations[strings.TrimPrefix(envKey, secretDestinationPrefix)] = apex
+			continue
 		default:
 			continue
 		}
@@ -100,13 +105,6 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 			def.outputDestination = dest
 		} else if dest := os.Getenv(secretDestinationPrefix + strings.ToUpper(def.secretID)); dest != "" {
 			def.outputDestination = dest
-		}
-
-		if config.SecretPayloadPath == "" && !config.SecretEnv {
-			if def.outputDestination == "" {
-				log.Info().Str("envKey", def.envkey).Msg("No secret output method was configured, will not attempt to retrieve secrets for this defintion")
-				continue
-			}
 		}
 
 		if def.plural {
@@ -134,6 +132,8 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		defs = append(defs, def)
 	}
 
+	secretPayloadPathOutput := make(map[string]string)
+
 	// output the secret definitions
 	for _, def := range defs {
 		if config.SecretEnv {
@@ -145,9 +145,43 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		}
 
 		if config.SecretPayloadPath != "" {
-			err := writeJSONSecrets(def.secrets, config.SecretPayloadPath)
-			if err != nil {
-				log.Fatal().Err(err).Msg("Could not write JSON secrets")
+			for k, v := range def.secrets {
+				secretPayloadPathOutput[k] = v
+			}
+		}
+	}
+
+	if config.SecretPayloadPath != "" {
+		log.Warn().Msg("secret path output functionality is planned for deprecation in version 2.0.0")
+		err := writeJSONSecrets(secretPayloadPathOutput, config.SecretPayloadPath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not write JSON secrets")
+		}
+	}
+
+	// attempt to locate unmatched destinations
+	// VAULT_SECRETS_API_KEY = secret/yourapplication
+	// it has keys like:
+	// 		db_password
+	// 		api_key
+	// it has keys like:
+	// and configured destinations such as
+	// 	DAYTONA_SECRET_DESTINATION_db_password
+	//	DAYTONA_SECRET_DESTINATION_api_key
+	// or VAULT_SECRET_API_KEY = secret/yourapplication/api_key
+	// and configured destinations such as
+	//	DAYTONA_SECRET_DESTINATION_api_key
+	for destKey := range destinations {
+		for j := range defs {
+			if defs[j].outputDestination == "" {
+				secret, ok := defs[j].secrets[destKey]
+				if ok {
+					err := writeFile(destinations[destKey], []byte(secret))
+					if err != nil {
+						log.Error().Err(err).Msgf("could not write secrets to file %s", destinations[destKey])
+						continue
+					}
+				}
 			}
 		}
 	}
@@ -161,7 +195,7 @@ func writeSecretsToDestination(def *SecretDefinition) error {
 		}
 	} else {
 		for _, secretValue := range def.secrets {
-			err := ioutil.WriteFile(def.outputDestination, []byte(secretValue), 0600)
+			err := writeFile(def.outputDestination, []byte(secretValue))
 			if err != nil {
 				return fmt.Errorf("could not write secrets to file '%s': %s", def.outputDestination, err)
 			}
@@ -176,7 +210,7 @@ func writeJSONSecrets(secrets map[string]string, filepath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to convert secrets payload to json: %s", err)
 	}
-	err = ioutil.WriteFile(filepath, payloadJSON, 0600)
+	err = writeFile(filepath, payloadJSON)
 	if err != nil {
 		return fmt.Errorf("could not write secrets to file '%s': %s", filepath, err)
 	}
@@ -208,6 +242,14 @@ func valueConverter(value interface{}) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported value type retrieved from vault: %T", v)
 	}
+}
+
+func writeFile(path string, data []byte) error {
+	err := ioutil.WriteFile(path, data, 0600)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretResult) error {
