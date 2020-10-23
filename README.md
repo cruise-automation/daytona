@@ -134,9 +134,9 @@ Result
 
 Fetched secrets can be output via the following methods:
 
-- `-secret-path` Specifies a file which to output a JSON representation of a fetched secret(s)
 - `DAYTONA_SECRET_DESTINATION_` The secret destination prefix as specified above
 - Enviornment variables via `-secret-env`. Because docker containers cannot set eachother's environment variables, `-secret-env` will have no effect unless used with the `-entrypoint` flag, so that any populated environment variables are passed to a provided executable.
+- `-secret-path` **(Deprecated)** Specifies a file which to output a JSON representation of a fetched secret(s)
 
 
 #### Data and Secret Key Layout
@@ -151,7 +151,7 @@ the secret `secret/path/to/database` should have its data stored as:
 }
 ```
 
-If `-secret-env` is supplied at runtime, the above example would be written to an environment variable as `DATABASE=databasepassword`, while `-secret-path /tmp/secrets` would be written to a file as:
+If `-secret-env` is supplied at runtime, the above example would be written to an environment variable as `DATABASE=databasepassword`, while `DAYTONA_SECRET_DESTINATION_PATH=/tmp/secrets` would be written to a file as:
 
 ```
 {
@@ -254,9 +254,9 @@ spec:
         value: /home/vault/.vault-token
       - name: VAULT_AUTH_ROLE
         value: awesome-app-vault-role-name
-      - name: SECRET_PATH
+      - name: DAYTONA_SECRET_DESTINATION_PATH
         value: /home/vault/secrets
-      - name: VAULT_SECRETS_APP
+      - name: VAULT_SECRETS_PATH
         value: secret/path/to/app
       - name: VAULT_SECRETS_GLOBAL
         value: secret/path/to/global/metrics
@@ -317,7 +317,7 @@ Assume you have the following Vault AWS Auth Role, `vault-role-name`:
 }
 ```
 
-`VAULT_SECRETS_TEST=secret/path/to/app/secrets daytona -iam-auth -token-path /home/vault/.vault-token -vault-auth-role vault-role-name -secret-path /home/vault/secrets`
+`VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -iam-auth -token-path /home/vault/.vault-token -vault-auth-role vault-role-name`
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
 
@@ -410,7 +410,7 @@ Assume you have the following Vault GCP Auth Role:
 }
 ```
 
-`VAULT_SECRETS_TEST=secret/path/to/app/secrets daytona -gcp-auth -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name -secret-path /home/vault/secrets`
+`VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -gcp-auth -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name`
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
 
@@ -516,7 +516,7 @@ Usage of ./daytona:
   -secret-env
       write secrets to environment variables (env: SECRET_ENV)
   -secret-path string
-      the full file path to store the JSON blob of the fetched secrets (env: SECRET_PATH)
+      (deprecated) the full file path to store the JSON blob of the fetched secrets (env: SECRET_PATH)
   -token-path string
       a full file path where a token will be read from/written to (env: TOKEN_PATH) (default "~/.vault-token")
   -vault-auth-role string
