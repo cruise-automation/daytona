@@ -488,11 +488,11 @@ Usage of ./daytona:
   -k8s-token-path string
       kubernetes service account jtw token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
   -log-level string
-      defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: LOG_LEVEL) (default "debug")
+      defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: DAYTONA_LOG_LEVEL) (default "debug")
   -log-level-field-name string
-      the field name used for the level field (env: LOG_LEVEL_FIELD_NAME) (default "level")
+      the field name used for the level field (env: DAYTONA_LOG_LEVEL_FIELD_NAME) (default "level")
   -log-structured
-      if set, log output will be JSON else writes human-friendly format (env: LOG_STRUCTURED) (default true)
+      if set, log output will be JSON else writes human-friendly format (env: DAYTONA_LOG_STRUCTURED) (default true)
   -max-auth-duration int
       the value, in seconds, for which DAYTONA should attempt to renew a token before exiting (env: MAX_AUTH_DURATION) (default 300)
   -pki-cert string
