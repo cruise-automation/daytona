@@ -1,3 +1,5 @@
+[![Testing](https://github.com/cruise-automation/daytona/actions/workflows/main.yml/badge.svg)](https://github.com/cruise-automation/daytona/actions/workflows/main.yml)
+
 ![DAYTONA](project/images/logo.png)
 
 This is intended to be a lighter, alternative, implementation of the Vault client CLI primarily for services and containers. Its core features are the ability to automate authentication, fetching of secrets, and automated token renewal.
