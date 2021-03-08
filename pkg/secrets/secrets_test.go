@@ -25,6 +25,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/cruise-automation/daytona/pkg/helpers/testhelpers"
@@ -539,4 +540,90 @@ func TestSecretPathAggregate(t *testing.T) {
 	for i := range scenarios {
 		assert.Equal(t, scenarios[i].expected, secrets[scenarios[i].key])
 	}
+}
+
+// Expose a deadlock in the parallel secret reader
+func TestExcessiveSecretPathIteration(t *testing.T) {
+	var config cfg.Config
+
+	var keys [1000]string
+
+	for i := 0; i < 1000; i++ {
+		keys[i] = fmt.Sprintf("text%v", i)
+	}
+
+	var x = struct {
+		Data map[string]interface{} `json:"data"`
+	}{
+		Data: map[string]interface{}{
+			"keys": keys,
+		},
+	}
+
+	b, err := json.Marshal(x)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ts := httptest.NewTLSServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case strings.HasPrefix(r.URL.Path, "/v1/secret/applicationa"):
+					q := r.URL.Query()
+					list := q.Get("list")
+					if list == "true" {
+						fmt.Fprintln(w, string(b))
+					} else {
+						fmt.Fprintln(w, `{"data": {"value": "yee"}}`)
+					}
+				default:
+					w.WriteHeader(404)
+					fmt.Fprintln(w, `{"errors": []}`)
+				}
+			}))
+	defer ts.Close()
+
+	client, err := testhelpers.GetTestClient(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	os.Setenv("VAULT_SECRETS_APPLICATIONA", "secret/applicationa")
+	defer os.Unsetenv("VAULT_SECRETS_APPLICATIONA")
+	config.SecretPayloadPath = file.Name()
+	config.Workers = 1
+
+	timeout := time.After(10 * time.Second)
+	done := make(chan bool)
+
+	go func() {
+		SecretFetcher(client, config)
+		done <- true
+	}()
+
+	select {
+	case <-timeout:
+		t.Fatal("secret fetcher is deadlocked")
+	case <-done:
+		// pass
+	}
+
+	secrets := make(map[string]string)
+	data, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = json.Unmarshal(data, &secrets)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 1000, len(secrets))
 }
