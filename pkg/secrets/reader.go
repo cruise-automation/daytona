@@ -18,8 +18,12 @@ package secrets
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // LogicalClient is the minimum interface needed to read secrets from the API
@@ -40,6 +44,8 @@ type ParallelReader struct {
 	cancelFunc func()
 
 	logicalClient LogicalClient
+
+	sigChan       chan os.Signal
 	keyPathInChan chan string
 	secretOutChan chan *SecretResult
 }
@@ -54,29 +60,63 @@ func NewParallelReader(ctx context.Context, logicalClient LogicalClient, numWork
 
 		logicalClient: logicalClient,
 
-		keyPathInChan: make(chan string, 100),
-		secretOutChan: make(chan *SecretResult, 100),
+		sigChan:       make(chan os.Signal),
+		keyPathInChan: make(chan string),
+		secretOutChan: make(chan *SecretResult),
 	}
+
+	signal.Notify(parallelReader.sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-parallelReader.sigChan
+		parallelReader.cancelFunc()
+	}()
 
 	if numWorkers < 1 {
 		numWorkers = 1
 	}
 
 	for i := 0; i < numWorkers; i++ {
-		go parallelReader.worker()
+		go parallelReader.worker(i + 1)
 	}
 
 	return parallelReader
 }
 
-// AsyncRequestKeyPath adds on a key path to read to the queue
-func (pr *ParallelReader) AsyncRequestKeyPath(keyPath string) {
-	pr.keyPathInChan <- keyPath
-}
+// ReadPaths processes all of the paths for the provided
+// secret definition
+func (pr *ParallelReader) ReadPaths(def *SecretDefinition) error {
+	done := make(chan bool)
+	errChan := make(chan error)
 
-// ReadSecretResult blocks until a finished secret result is returned
-func (pr *ParallelReader) ReadSecretResult() *SecretResult {
-	return <-pr.secretOutChan
+	go func() {
+		for _, path := range def.paths {
+			pr.keyPathInChan <- path
+		}
+	}()
+
+	go func() {
+		for range def.paths {
+			result := <-pr.secretOutChan
+			err := def.addSecrets(result)
+			if err != nil {
+				errChan <- err
+				return
+			}
+		}
+		done <- true
+	}()
+
+	for {
+		select {
+		case err := <-errChan:
+			return err
+		case <-done:
+			return nil
+		case <-pr.ctx.Done():
+			return pr.ctx.Err()
+		}
+	}
 }
 
 // Close stops the workers
@@ -84,12 +124,17 @@ func (pr *ParallelReader) Close() {
 	pr.cancelFunc()
 }
 
-func (pr *ParallelReader) worker() {
+func (pr *ParallelReader) worker(id int) {
+	log.Trace().Int("worker_id", id).Msg("starting worker")
+
 	for {
 		select {
 		case <-pr.ctx.Done():
+			log.Trace().Int("worker_id", id).Msg("shutting down worker")
 			return
 		case keyPath := <-pr.keyPathInChan:
+			log.Trace().Int("worker_id", id).
+				Str("path", keyPath).Msg("reading vault path")
 			secret, err := pr.logicalClient.Read(keyPath)
 			pr.secretOutChan <- &SecretResult{
 				KeyPath: keyPath,

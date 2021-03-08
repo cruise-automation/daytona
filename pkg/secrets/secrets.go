@@ -24,6 +24,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
@@ -41,6 +42,8 @@ const (
 // SecretDefinition is used for representing
 // a secret definition input
 type SecretDefinition struct {
+	sync.RWMutex
+
 	envkey            string
 	secretID          string
 	secretApex        string
@@ -60,6 +63,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	destinations := make(map[string]string)
 
 	ctx := context.Background()
+
 	parallelReader := NewParallelReader(ctx, client.Logical(), config.Workers)
 
 	envs := os.Environ()
@@ -114,24 +118,17 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 			}
 		}
 
-		for _, path := range def.paths {
-			parallelReader.AsyncRequestKeyPath(path)
+		log.Debug().Msgf("reading paths for %s=%s", def.envkey, def.secretApex)
+		err := parallelReader.ReadPaths(def)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("failed to read paths for %s=%s", def.envkey, def.secretApex)
 		}
-		for range def.paths {
-			secretResult := parallelReader.ReadSecretResult()
-			if secretResult.Err != nil {
-				log.Fatal().Err(secretResult.Err).Msg("Could not to read secret result")
-			}
-
-			err := def.addSecrets(client, secretResult)
-			if err != nil {
-				log.Fatal().Err(err).Msg("Could not add secrets to the definition")
-			}
-		}
+		log.Debug().Msgf("finished reading paths for %s=%s", def.envkey, def.secretApex)
 
 		defs = append(defs, def)
 	}
 
+	defer parallelReader.Close()
 	secretPayloadPathOutput := make(map[string]string)
 
 	// output the secret definitions
@@ -252,21 +249,21 @@ func writeFile(path string, data []byte) error {
 	return nil
 }
 
-func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretResult) error {
+func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 	keyPath := secretResult.KeyPath
-	secret := secretResult.Secret
-	err := secretResult.Err
-
 	_, keyName := path.Split(keyPath)
+	secret := secretResult.Secret
+
+	err := secretResult.Err
 	if err != nil {
-		log.Fatal().Err(err).Str("path", keyPath).Msg("Failed retrieving secret")
+		return fmt.Errorf("failed to retrieve secret path %s: %w", keyPath, err)
 	}
 	if secret == nil {
-		log.Fatal().Str("secret", keyName).Str("path", keyPath).Msg("Vault listed a secret, but got not-found trying to read it; very strange")
+		return fmt.Errorf("vault listed a secret, but no data was returned when reading %s - %s; very strange", keyName, keyPath)
 	}
 	secretData := secret.Data
 	if secret.RequestID == "" && len(secretData) == 0 {
-		log.Fatal().Str("secret", keyName).Str("path", keyPath).Msg("Vault listed a secret, but failed trying to read it; likely the rate-limiting retry attempts were exceeded")
+		return fmt.Errorf("Vault listed a secret %s %s, but failed trying to read it; likely the rate-limiting retry attempts were exceeded", keyName, keyPath)
 	}
 
 	singleValueKey := os.Getenv(secretValueKeyPrefix + sd.secretID)
@@ -275,7 +272,9 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 		if ok {
 			secretValue, err := valueConverter(v)
 			if err == nil {
+				sd.Lock()
 				sd.secrets[singleValueKey] = secretValue
+				sd.Unlock()
 				log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will only read value")
 			}
 			return err
@@ -287,6 +286,7 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 		if err != nil {
 			return fmt.Errorf("failed to convert %v: %w", k, err)
 		}
+		sd.Lock()
 		switch k {
 		case defaultKeyName:
 			sd.secrets[keyName] = secretValue
@@ -294,6 +294,7 @@ func (sd *SecretDefinition) addSecrets(client *api.Client, secretResult *SecretR
 			expandedKeyName := fmt.Sprintf("%s_%s", keyName, k)
 			sd.secrets[expandedKeyName] = secretValue
 		}
+		sd.Unlock()
 	}
 	return nil
 }

@@ -30,7 +30,7 @@ ifndef VERSION_TAG
 endif
 
 test:
-	go test -cover -count=1 -v ${PACKAGES}
+	go test -race -cover -count=1 -v ${PACKAGES}
 
 coverage:
 	go test -cover -count=1 -coverprofile=coverage.out -v ${PACKAGES}
