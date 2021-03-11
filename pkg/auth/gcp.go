@@ -29,6 +29,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	iam "google.golang.org/api/iam/v1"
+	"google.golang.org/api/option"
 )
 
 // GCPService is an external service that vault can authenticate requests against
@@ -94,7 +95,7 @@ func (g *GCPService) getGCPSignedJwt(role, serviceAccount, project string) (stri
 		Payload: string(payloadBytes),
 	}
 
-	iamClient, err := iam.New(httpClient)
+	iamClient, err := iam.NewService(ctx, option.WithHTTPClient(httpClient))
 	if err != nil {
 		return "", fmt.Errorf("could not create IAM client: %v", err)
 	}

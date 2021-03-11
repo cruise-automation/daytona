@@ -71,15 +71,15 @@ func (c *Config) ValidateAuthType() bool {
 // configuration validation
 func (c *Config) ValidateConfig() error {
 	if c.VaultAuthRoleName == "" {
-		return errors.New("You must supply a role name via VAULT_AUTH_ROLE or -vault-auth-role")
+		return errors.New("you must supply a role name via VAULT_AUTH_ROLE or -vault-auth-role")
 	}
 	if c.SecretPayloadPath != "" {
 		if f, err := os.Stat(c.SecretPayloadPath); err == nil && f.IsDir() {
-			return errors.New("The secret path you provided is a directory, please supply a full file path")
+			return errors.New("the secret path you provided is a directory, please supply a full file path")
 		}
 	}
 	if (c.PkiIssuer != "" || c.PkiRole != "" || c.PkiDomains != "" || c.PkiPrivateKey != "" || c.PkiCertificate != "") && (c.PkiIssuer == "" || c.PkiRole == "" || c.PkiDomains == "" || c.PkiPrivateKey == "" || c.PkiCertificate == "") {
-		return errors.New("One or more required PKI signing values are missing. PKI_ISSUER: " + c.PkiIssuer + ", PKI_ROLE: " + c.PkiRole + ", PKI_DOMAINS: " + c.PkiDomains + ", PKI_PRIVKEY: " + c.PkiPrivateKey + ", PKI_CERT: " + c.PkiCertificate)
+		return errors.New("one or more required PKI signing values are missing. PKI_ISSUER: " + c.PkiIssuer + ", PKI_ROLE: " + c.PkiRole + ", PKI_DOMAINS: " + c.PkiDomains + ", PKI_PRIVKEY: " + c.PkiPrivateKey + ", PKI_CERT: " + c.PkiCertificate)
 	}
 	return nil
 }
