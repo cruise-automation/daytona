@@ -73,7 +73,7 @@ func writeCertData(resp *api.Secret, certFile string, keyFile string, useCaChain
 		}
 	}
 
-	err := ioutil.WriteFile(certFile, []byte(certificate.String()), 0600)
+	err := ioutil.WriteFile(certFile, certificate.Bytes(), 0600)
 	if err != nil {
 		return fmt.Errorf("could not write certificate to file '%s': %s", certFile, err)
 	}

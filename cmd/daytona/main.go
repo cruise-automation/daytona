@@ -155,15 +155,17 @@ func main() {
 		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth}).Msg("You must provide an auth method")
 	}
 
+	var mountPath string
 	switch {
 	case config.K8SAuth:
 		auth.InferK8SConfig(&config)
-		config.BuildAuthMountPath(config.K8SAuthMount)
+		mountPath = config.K8SAuthMount
 	case config.AWSAuth:
-		config.BuildAuthMountPath(config.AWSAuthMount)
+		mountPath = config.AWSAuthMount
 	case config.GCPAuth:
-		config.BuildAuthMountPath(config.GCPAuthMount)
+		mountPath = config.GCPAuthMount
 	}
+	config.BuildAuthMountPath(mountPath)
 
 	if err := config.ValidateConfig(); err != nil {
 		log.Fatal().Err(err).Msg("Invalid configuration")

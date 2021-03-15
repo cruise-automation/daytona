@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/cruise-automation/daytona/pkg/config"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
@@ -33,7 +32,7 @@ import (
 // source that should be authenticated against
 type Authenticator interface {
 	// Auth is used to authenticate to an external service
-	Auth(*api.Client, config.Config) (string, error)
+	Auth(*api.Client, cfg.Config) (string, error)
 }
 
 // authenticate authenticates!

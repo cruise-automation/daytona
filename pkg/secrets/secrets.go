@@ -219,7 +219,7 @@ func setEnvSecrets(secrets map[string]string) error {
 	for k, v := range secrets {
 		err := os.Setenv(k, v)
 		if err != nil {
-			return fmt.Errorf("Error from os.Setenv: %s", err)
+			return fmt.Errorf("error from os.Setenv: %s", err)
 		}
 		log.Info().Str("var", k).Msg("Set env var")
 	}
@@ -263,7 +263,7 @@ func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 	}
 	secretData := secret.Data
 	if secret.RequestID == "" && len(secretData) == 0 {
-		return fmt.Errorf("Vault listed a secret %s %s, but failed trying to read it; likely the rate-limiting retry attempts were exceeded", keyName, keyPath)
+		return fmt.Errorf("vault listed a secret %s %s, but failed trying to read it; likely the rate-limiting retry attempts were exceeded", keyName, keyPath)
 	}
 
 	singleValueKey := os.Getenv(secretValueKeyPrefix + sd.secretID)
@@ -325,7 +325,7 @@ func (sd *SecretDefinition) Walk(client *api.Client) error {
 		if !strings.HasSuffix(key, "/") {
 			paths = append(paths, path.Join(sd.secretApex, key))
 		} else {
-			log.Info().Str("subpath", key).Str("secretApex", sd.secretApex).Msg("Found subpath while walking - only top-level path iteration is supported at this time")
+			log.Info().Str("subpath", key).Str("secretApex", sd.secretApex).Msg("found subpath while walking - only top-level path iteration is supported at this time")
 		}
 	}
 	sd.paths = paths
