@@ -7,23 +7,19 @@ import (
 )
 
 func (c *Config) GenerateStandardTestConfig() {
-	c.K8SAuth = true
+	c.AuthMethod = "K8S"
 	c.MaximumAuthRetry = 1
 }
 
 func TestInvalidConfig(t *testing.T) {
 	var config Config
-	config.K8SAuth = true
-	config.AWSAuth = true
-	config.GCPAuth = false
+	config.AuthMethod = "UNKNOWN"
 	err := config.ValidateConfig()
 	if err == nil {
 		t.Fatal("expected an error from invalid config")
 	}
 
-	config.K8SAuth = true
-	config.AWSAuth = false
-	config.GCPAuth = false
+	config.AuthMethod = "K8S"
 	err = config.ValidateConfig()
 	assert.Equal(t, "you must supply a role name via VAULT_AUTH_ROLE or -vault-auth-role", err.Error())
 
@@ -42,5 +38,24 @@ func TestInvalidConfig(t *testing.T) {
 	err = config.ValidateConfig()
 	if err != nil {
 		t.Fatal("got an error in PKI config, didn't expect one, bailing")
+	}
+}
+
+func TestValidateAuthType(t *testing.T) {
+	var config Config
+	config.AuthMethod = "UNKNOWN"
+	ok := config.ValidateAuthType()
+	if ok {
+		t.Fatal("expected auth type to be valid invalid")
+	}
+
+	config.AuthMethod = "k8s"
+	ok = config.ValidateAuthType()
+	if ok {
+		t.Fatal("expected auth type to be valid")
+	}
+
+	if config.AuthMethod != "K8S" {
+		t.Fatal("expected auth type to have been uppercased")
 	}
 }
