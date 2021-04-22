@@ -20,13 +20,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 	"sync"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
+	"github.com/cruise-automation/daytona/pkg/helpers"
 	"github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
 )
@@ -242,7 +242,7 @@ func valueConverter(value interface{}) (string, error) {
 }
 
 func writeFile(path string, data []byte) error {
-	err := ioutil.WriteFile(path, data, 0600)
+	err := helpers.WriteFile(path, data, 0600)
 	if err != nil {
 		return err
 	}
