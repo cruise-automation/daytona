@@ -45,17 +45,10 @@ func TestValidateAuthType(t *testing.T) {
 	var config Config
 	config.AuthMethod = "UNKNOWN"
 	ok := config.ValidateAuthType()
-	if ok {
-		t.Fatal("expected auth type to be valid invalid")
-	}
+	assert.False(t, ok, "expected auth type to be invalid")
 
 	config.AuthMethod = "k8s"
 	ok = config.ValidateAuthType()
-	if ok {
-		t.Fatal("expected auth type to be valid")
-	}
-
-	if config.AuthMethod != "K8S" {
-		t.Fatal("expected auth type to have been uppercased")
-	}
+	assert.True(t, ok, "expected auth type to be valid")
+	assert.Equal(t, "K8S", config.AuthMethod, "expected auth type to have been uppercased")
 }

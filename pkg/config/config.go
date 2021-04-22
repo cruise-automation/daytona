@@ -9,6 +9,13 @@ import (
 	"github.com/cruise-automation/daytona/pkg/logging"
 )
 
+// Auth methods
+const (
+	K8s = "K8S"
+	AWS = "AWS"
+	GCP = "GCP"
+)
+
 const authPathFmtString = "auth/%s/login"
 
 // Config represents an application configuration
@@ -57,7 +64,7 @@ func (c *Config) ValidateAuthType() bool {
 	c.AuthMethod = strings.ToUpper(c.AuthMethod)
 
 	switch c.AuthMethod {
-	case "k8S", "AWS", "GCP":
+	case K8s, AWS, GCP:
 		return true
 	default:
 		return false

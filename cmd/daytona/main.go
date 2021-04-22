@@ -142,12 +142,12 @@ func main() {
 
 	var mountPath string
 	switch config.AuthMethod {
-	case "K8S":
+	case cfg.K8s:
 		auth.InferK8SConfig(&config)
 		mountPath = config.K8SAuthMount
-	case "AWS":
+	case cfg.AWS:
 		mountPath = config.AWSAuthMount
-	case "GCP":
+	case cfg.GCP:
 		mountPath = config.GCPAuthMount
 	}
 
