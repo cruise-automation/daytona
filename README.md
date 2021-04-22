@@ -278,7 +278,7 @@ spec:
       - name: vault-secrets
         mountPath: /home/vault
       env:
-      - name: AUTH
+      - name: AUTH_METHOD
         value: "k8S"
       - name : K8S_AUTH_MOUNT
         value: "kubernetes-gcp-dev-cluster"
@@ -351,8 +351,8 @@ Assume you have the following Vault AWS Auth Role, `vault-role-name`:
 }
 ```
 
-```
-VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -auth=AWS -token-path /home/vault/.vault-token -vault-auth-role vault-role-name
+```sh
+VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -auth-method=AWS -token-path /home/vault/.vault-token -vault-auth-role vault-role-name
 ```
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
@@ -380,7 +380,7 @@ as a representation of the following vault data:
 In a `Dockerfile`:
 
 ```dockerfile
-ENTRYPOINT [ "./daytona", "-secret-env", "-auth", "AWS", "-vault-auth-role", "vault-role-name", "-entrypoint", "--" ]
+ENTRYPOINT [ "./daytona", "-secret-env", "-auth-method", "AWS", "-vault-auth-role", "vault-role-name", "-entrypoint", "--" ]
 ```
 
 combined with supplying the following during a `docker run`:
@@ -417,7 +417,7 @@ as a representation of the following vault data:
 In a `Dockerfile`:
 
 ```dockerfile
-ENTRYPOINT [ "./daytona", "-auth", "AWS", "-vault-auth-role", "vault-role-name", "-pki-issuer", "pki-backend", "-pki-role", "my-role", "-pki-domains", "www.example.com", "-pki-cert", "/etc/cert.pem", "-pki-privkey", "/etc/key.pem", "-pki-use-ca-chain", -entrypoint", "--" ]
+ENTRYPOINT [ "./daytona", "-auth-method", "AWS", "-vault-auth-role", "vault-role-name", "-pki-issuer", "pki-backend", "-pki-role", "my-role", "-pki-domains", "www.example.com", "-pki-cert", "/etc/cert.pem", "-pki-privkey", "/etc/key.pem", "-pki-use-ca-chain", -entrypoint", "--" ]
 ```
 
 Given a PKI backend issuer role located at `pki-backend/issue/my-role`, and `update` permissions granted to `vault-role-name` on this path, Daytona will request a certificate for `www.example.com` from Vault, placing the certificate (with CA chain) and private key in `/etc`.
@@ -448,8 +448,8 @@ Assume you have the following Vault GCP Auth Role:
 }
 ```
 
-```
-VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -auth=GCP -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name
+```sh
+VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -auth-method=GCP -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name
 ```
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
@@ -505,8 +505,8 @@ Usage of ./daytona:
   -auth-mount string
   -auto-renew
       if enabled, starts the token renewal service (env: AUTO_RENEW)
-  -auth
-      select between AWS, GCP, or K8S as the vault authentication mechanism (env: AUTH)
+  -auth-method
+      select between AWS, GCP, or K8S as the vault authentication mechanism (env: AUTH_METHOD)
   -entrypoint
       if enabled, execs the command after the separator (--) when done. mostly useful with -secret-env (env: ENTRYPOINT)
   -gcp-auth-mount string

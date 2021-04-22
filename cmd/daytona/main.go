@@ -48,7 +48,7 @@ const (
 )
 
 func init() {
-	flag.StringVar(&config.AuthMethod, "auth", "", "Set the vault authentication mechanism. Options are K8s, AWS, GCP")
+	flag.StringVar(&config.AuthMethod, "auth-method", "", "Select between AWS, GCP, or K8S as the vault authentication mechanism (env: AUTH_METHOD)")
 	flag.StringVar(&config.VaultAddress, "address", "", "Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied")
 	flag.StringVar(&config.TokenPath, "token-path", cfg.BuildDefaultConfigItem("TOKEN_PATH", "~/.vault-token"), "a full file path where a token will be read from/written to (env: TOKEN_PATH)")
 	flag.StringVar(&config.K8STokenPath, "k8s-token-path", cfg.BuildDefaultConfigItem("K8S_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"), "kubernetes service account jtw token path (env: K8S_TOKEN_PATH)")
