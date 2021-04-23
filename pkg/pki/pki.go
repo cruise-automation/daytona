@@ -19,10 +19,10 @@ package pki
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
+	"github.com/cruise-automation/daytona/pkg/helpers"
 	"github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
 )
@@ -73,12 +73,12 @@ func writeCertData(resp *api.Secret, certFile string, keyFile string, useCaChain
 		}
 	}
 
-	err := ioutil.WriteFile(certFile, certificate.Bytes(), 0600)
+	err := helpers.WriteFile(certFile, certificate.Bytes(), 0600)
 	if err != nil {
 		return fmt.Errorf("could not write certificate to file '%s': %s", certFile, err)
 	}
 
-	err = ioutil.WriteFile(keyFile, []byte(resp.Data["private_key"].(string)), 0600)
+	err = helpers.WriteFile(keyFile, []byte(resp.Data["private_key"].(string)), 0600)
 	if err != nil {
 		return fmt.Errorf("could not write private key to file '%s': %s", keyFile, err)
 	}
