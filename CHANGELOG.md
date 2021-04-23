@@ -3,6 +3,7 @@
 - Update to go 1.16
 - Address a potential deadlock in the parallel secret reader
 - Secrets can be written to file paths whose parents do not exist; parents are created as needed
+- Updates; golang 1.16 -> 1.16.3. Upgrade all direct dependencies
 
 ## 1.1.4 - Oct 23, 2020
 
