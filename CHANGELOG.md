@@ -24,7 +24,7 @@
 
 ## 1.1.0 - Mar 19, 2020
 
--  introduces arbitrary suffix identifiers for Secret Definitions.
+- Introduces arbitrary suffix identifiers for Secret Definitions.
 
 ## 1.0.2 - Oct 16, 2019
 
