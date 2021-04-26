@@ -68,12 +68,14 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 			if err != nil {
 				return err
 			}
+
 			if val.Field(i).Kind() == reflect.Int64 && val.Field(i).Type().String() == "time.Duration" {
 				var d time.Duration
 				d, err = time.ParseDuration(v.(string))
 				if err != nil {
 					return err
 				}
+
 				iv = int64(d)
 			} else {
 				if value, err := v.(json.Number).Int64(); err == nil {
