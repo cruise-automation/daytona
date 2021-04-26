@@ -22,6 +22,7 @@ type ConfigWithSecrets struct {
 	ADuration  time.Duration     `vault_path_key:"password" vault_key:"a_duration"`
 	AMap       map[string]string `vault_path_key:"password" vault_key:"a_map"`
 	Slice      []string          `vault_path_key:"password" vault_key:"a_slice"`
+	AMismatch  float64           `vault_path_key:"password" vault_key:"a_mismatch"`
 	Embedded
 }
 
@@ -43,7 +44,8 @@ func TestUnmarshalSecret(t *testing.T) {
 				  "an_int": 12,
 				  "a_float": 6.66,
 				  "a_bool": true,
-				  "a_duration": "7h"
+				  "a_duration": "7h",
+				  "a_mismatch": "7xL"
 				},
 				"lease_duration": 3600,
 				"lease_id": "",

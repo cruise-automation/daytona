@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -50,7 +51,6 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 
 	for i := 0; i < val.NumField(); i++ {
 		path, valueIndex := parsePath(apex, val.Type().Field(i).Tag)
-
 		switch val.Field(i).Kind() {
 		case reflect.Struct:
 			err := UnmarshalSecrets(client, val.Field(i).Addr().Interface(), apex)
@@ -71,15 +71,28 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 
 			if val.Field(i).Kind() == reflect.Int64 && val.Field(i).Type().String() == "time.Duration" {
 				var d time.Duration
-				d, err = time.ParseDuration(v.(string))
-				if err != nil {
-					return err
+				dur, ok := v.(string)
+				if ok {
+					d, err = time.ParseDuration(dur)
+					if err != nil {
+						return err
+					}
+					iv = int64(d)
 				}
-
-				iv = int64(d)
 			} else {
-				if value, err := v.(json.Number).Int64(); err == nil {
-					iv = value
+				switch v := v.(type) {
+				case json.Number:
+					if value, err := v.Int64(); err == nil {
+						iv = value
+					} else {
+						return err
+					}
+				case string:
+					vv, err := strconv.ParseInt(v, 0, val.Field(i).Type().Bits())
+					if err != nil {
+						return err
+					}
+					iv = vv
 				}
 			}
 			val.Field(i).SetInt(iv)
@@ -91,8 +104,12 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 			if err != nil {
 				return err
 			}
-			if value, err := v.(json.Number).Float64(); err == nil {
-				val.Field(i).SetFloat(value)
+			if f, ok := v.(json.Number); ok {
+				ff, err := f.Float64()
+				if err != nil {
+					return err
+				}
+				val.Field(i).SetFloat(ff)
 			}
 		case reflect.String:
 			if path == "" {
@@ -102,8 +119,8 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 			if err != nil {
 				return err
 			}
-			if value := v.(string); value != "" {
-				val.Field(i).SetString(value)
+			if vv, ok := v.(string); ok {
+				val.Field(i).SetString(vv)
 			}
 		case reflect.Bool:
 			if path == "" {
@@ -113,7 +130,9 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 			if err != nil {
 				return err
 			}
-			val.Field(i).SetBool(v.(bool))
+			if b, ok := v.(bool); ok {
+				val.Field(i).SetBool(b)
+			}
 		default:
 			continue
 		}
