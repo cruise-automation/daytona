@@ -25,7 +25,7 @@ var ErrValueInput = errors.New("the provided value must be a struct pointer")
 
 // UnmarshalSecrets traverses the value v recursively looking for tagged fields that
 // can be populated with secret data using the provided client and optional apex.
-// If the apex is provided, the tag vault_path_key is appened to the apex to construct
+// If the apex is provided, the tag vault_path_key is appended to the apex to construct
 // the final secret path. If the tag vault_path is provided, the apex is ignored.
 // A default key of 'default' is used on each path, it can be overridden using the vault_key tag.
 //
@@ -50,10 +50,19 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 	}
 
 	for i := 0; i < val.NumField(); i++ {
+		fName := val.Type().Field(i).Name
+		f := val.Field(i)
+		if f.Kind() == reflect.Ptr {
+			if f.IsNil() {
+				f.Set(reflect.New(f.Type().Elem()))
+			}
+			f = f.Elem()
+		}
+
 		path, valueIndex := parsePath(apex, val.Type().Field(i).Tag)
-		switch val.Field(i).Kind() {
+		switch f.Kind() {
 		case reflect.Struct:
-			err := UnmarshalSecrets(client, val.Field(i).Addr().Interface(), apex)
+			err := UnmarshalSecrets(client, f.Addr().Interface(), apex)
 			if err != nil {
 				return err
 			}
@@ -69,7 +78,7 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 				return err
 			}
 
-			if val.Field(i).Kind() == reflect.Int64 && val.Field(i).Type().String() == "time.Duration" {
+			if f.Kind() == reflect.Int64 && f.Type().String() == "time.Duration" {
 				var d time.Duration
 				dur, ok := v.(string)
 				if ok {
@@ -79,7 +88,7 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 					}
 					iv = int64(d)
 				} else {
-					return fmt.Errorf("expected a string but was given type %T for field %s", v, val.Type().Field(i).Name)
+					return fmt.Errorf("expected a string but was given type %T for field %s", v, fName)
 				}
 			} else {
 				switch v := v.(type) {
@@ -90,16 +99,16 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 						return err
 					}
 				case string:
-					vv, err := strconv.ParseInt(v, 0, val.Field(i).Type().Bits())
+					vv, err := strconv.ParseInt(v, 0, f.Type().Bits())
 					if err != nil {
 						return err
 					}
 					iv = vv
 				default:
-					return fmt.Errorf("expected a number or string but was given type %T for field %s", v, val.Type().Field(i).Name)
+					return fmt.Errorf("expected a number or string but was given type %T for field %s", v, fName)
 				}
 			}
-			val.Field(i).SetInt(iv)
+			f.SetInt(iv)
 		case reflect.Float32, reflect.Float64:
 			if path == "" {
 				continue
@@ -119,15 +128,15 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 					return err
 				}
 			case string:
-				vv, err := strconv.ParseFloat(v, val.Field(i).Type().Bits())
+				vv, err := strconv.ParseFloat(v, f.Type().Bits())
 				if err != nil {
 					return err
 				}
 				iv = vv
 			default:
-				return fmt.Errorf("expected a float or string but was given type %T for field %s", v, val.Type().Field(i).Name)
+				return fmt.Errorf("expected a float or string but was given type %T for field %s", v, fName)
 			}
-			val.Field(i).SetFloat(iv)
+			f.SetFloat(iv)
 		case reflect.String:
 			if path == "" {
 				continue
@@ -137,9 +146,9 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 				return err
 			}
 			if vv, ok := v.(string); ok {
-				val.Field(i).SetString(vv)
+				f.SetString(vv)
 			} else {
-				return fmt.Errorf("expected a string but was given type %T for field %s", v, val.Type().Field(i).Name)
+				return fmt.Errorf("expected a string but was given type %T for field %s", v, fName)
 			}
 		case reflect.Bool:
 			if path == "" {
@@ -162,9 +171,9 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 				b = pb
 
 			default:
-				return fmt.Errorf("expected a bool or string but was given type %T for field %s", v, val.Type().Field(i).Name)
+				return fmt.Errorf("expected a bool or string but was given type %T for field %s", v, fName)
 			}
-			val.Field(i).SetBool(b)
+			f.SetBool(b)
 		default:
 			continue
 		}
