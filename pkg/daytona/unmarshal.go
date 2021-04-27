@@ -78,6 +78,8 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 						return err
 					}
 					iv = int64(d)
+				} else {
+					return fmt.Errorf("expected a string but was given type %T for field %s", v, val.Type().Field(i).Name)
 				}
 			} else {
 				switch v := v.(type) {
@@ -93,6 +95,8 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 						return err
 					}
 					iv = vv
+				default:
+					return fmt.Errorf("expected a number or string but was given type %T for field %s", v, val.Type().Field(i).Name)
 				}
 			}
 			val.Field(i).SetInt(iv)
@@ -100,17 +104,30 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 			if path == "" {
 				continue
 			}
+
+			var iv float64
+
 			v, err := fetchValue(client, path, valueIndex)
 			if err != nil {
 				return err
 			}
-			if f, ok := v.(json.Number); ok {
-				ff, err := f.Float64()
+			switch v := v.(type) {
+			case json.Number:
+				if value, err := v.Float64(); err == nil {
+					iv = value
+				} else {
+					return err
+				}
+			case string:
+				vv, err := strconv.ParseFloat(v, val.Field(i).Type().Bits())
 				if err != nil {
 					return err
 				}
-				val.Field(i).SetFloat(ff)
+				iv = vv
+			default:
+				return fmt.Errorf("expected a float or string but was given type %T for field %s", v, val.Type().Field(i).Name)
 			}
+			val.Field(i).SetFloat(iv)
 		case reflect.String:
 			if path == "" {
 				continue
@@ -121,6 +138,8 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 			}
 			if vv, ok := v.(string); ok {
 				val.Field(i).SetString(vv)
+			} else {
+				return fmt.Errorf("expected a string but was given type %T for field %s", v, val.Type().Field(i).Name)
 			}
 		case reflect.Bool:
 			if path == "" {
@@ -130,9 +149,22 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 			if err != nil {
 				return err
 			}
-			if b, ok := v.(bool); ok {
-				val.Field(i).SetBool(b)
+
+			var b bool
+			switch v := v.(type) {
+			case bool:
+				b = v
+			case string:
+				pb, err := strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+				b = pb
+
+			default:
+				return fmt.Errorf("expected a bool or string but was given type %T for field %s", v, val.Type().Field(i).Name)
 			}
+			val.Field(i).SetBool(b)
 		default:
 			continue
 		}
