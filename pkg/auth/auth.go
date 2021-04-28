@@ -105,11 +105,11 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 
 	var svc Authenticator
 	switch config.AuthMethod {
-	case cfg.K8s:
+	case cfg.AuthMethodK8s:
 		svc = &K8SService{}
-	case cfg.AWS:
+	case cfg.AuthMethodAWS:
 		svc = &AWSService{}
-	case cfg.GCP:
+	case cfg.AuthMethodGCP:
 		svc = &GCPService{}
 	default:
 		panic("should never get here")

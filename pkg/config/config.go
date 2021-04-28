@@ -4,16 +4,17 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/cruise-automation/daytona/pkg/logging"
 )
 
+type AuthMethod string
+
 // Auth methods
 const (
-	K8s = "K8S"
-	AWS = "AWS"
-	GCP = "GCP"
+	AuthMethodK8s AuthMethod = "K8S"
+	AuthMethodAWS AuthMethod = "AWS"
+	AuthMethodGCP AuthMethod = "GCP"
 )
 
 const authPathFmtString = "auth/%s/login"
@@ -22,7 +23,7 @@ const authPathFmtString = "auth/%s/login"
 type Config struct {
 	VaultAddress      string
 	TokenPath         string
-	AuthMethod        string
+	AuthMethod        AuthMethod
 	K8STokenPath      string
 	K8SAuthMount      string
 	AWSAuthMount      string
@@ -61,10 +62,8 @@ func BuildDefaultConfigItem(envKey string, def string) (val string) {
 // ValidateAuthType validates that the user has supplied
 // a valid authentication type
 func (c *Config) ValidateAuthType() bool {
-	c.AuthMethod = strings.ToUpper(c.AuthMethod)
-
 	switch c.AuthMethod {
-	case K8s, AWS, GCP:
+	case AuthMethodK8s, AuthMethodAWS, AuthMethodGCP:
 		return true
 	default:
 		return false

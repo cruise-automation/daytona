@@ -47,8 +47,7 @@ func TestValidateAuthType(t *testing.T) {
 	ok := config.ValidateAuthType()
 	assert.False(t, ok, "expected auth type to be invalid")
 
-	config.AuthMethod = "k8s"
+	config.AuthMethod = "K8S"
 	ok = config.ValidateAuthType()
 	assert.True(t, ok, "expected auth type to be valid")
-	assert.Equal(t, "K8S", config.AuthMethod, "expected auth type to have been uppercased")
 }
