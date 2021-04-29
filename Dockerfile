@@ -1,4 +1,4 @@
-#   Copyright 2019 GM Cruise LLC
+#   Copyright 2019-present, Cruise LLC
 
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -11,10 +11,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-ARG GO_VERSION=1.13
+ARG GO_VERSION=1.16.3
 FROM golang:${GO_VERSION}-alpine AS builder
 ENV GOFLAGS -mod=vendor
-RUN apk --update add ca-certificates make upx
+RUN apk --update add ca-certificates make upx git
 WORKDIR /go/src/github.com/cruise-automation/daytona
 COPY . .
 RUN \

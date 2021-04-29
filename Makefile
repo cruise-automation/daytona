@@ -1,4 +1,4 @@
-#   Copyright 2019 GM Cruise LLC
+#   Copyright 2019-present, Cruise LLC
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ ifndef VERSION_TAG
 endif
 
 test:
-	go test -cover -count=1 -v ${PACKAGES}
+	go test -race -cover -count=1 -v ${PACKAGES}
 
 coverage:
 	go test -cover -count=1 -coverprofile=coverage.out -v ${PACKAGES}
@@ -41,8 +41,8 @@ lint:
 	gofmt -d -l ${GOFILES}
 
 build:
-	CGO_ENABLED=0 go build ${GO_LDFLAGS} -a -o daytona cmd/daytona/main.go
-	@command -v upx && upx daytona || echo "[INFO] No upx installed, not compressing."
+	CGO_ENABLED=0 go build ${GO_LDFLAGS} -o daytona cmd/daytona/main.go
+	command -v upx && upx daytona || echo "[INFO] No upx installed, not compressing."
 
 image: check
 	docker build -t daytona:${VERSION_TAG} .

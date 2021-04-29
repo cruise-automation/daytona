@@ -1,5 +1,5 @@
 /*
-Copyright 2019 GM Cruise LLC
+Copyright 2019-present, Cruise LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,15 +20,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	iam "google.golang.org/api/iam/v1"
+	"google.golang.org/api/option"
 )
 
 // GCPService is an external service that vault can authenticate requests against
@@ -36,7 +37,7 @@ type GCPService struct{}
 
 // Auth is used to authenticate to the service
 func (g *GCPService) Auth(client *api.Client, config cfg.Config) (string, error) {
-	log.Println("attempting gcp iam auth..")
+	log.Info().Msg("attempting gcp iam auth..")
 	if config.GCPServiceAccount == "" {
 		return "", errors.New("-gcp-svc-acct is missing")
 	}
@@ -94,7 +95,7 @@ func (g *GCPService) getGCPSignedJwt(role, serviceAccount, project string) (stri
 		Payload: string(payloadBytes),
 	}
 
-	iamClient, err := iam.New(httpClient)
+	iamClient, err := iam.NewService(ctx, option.WithHTTPClient(httpClient))
 	if err != nil {
 		return "", fmt.Errorf("could not create IAM client: %v", err)
 	}

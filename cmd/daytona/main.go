@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -28,10 +27,13 @@ import (
 
 	"github.com/cruise-automation/daytona/pkg/auth"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
+	"github.com/cruise-automation/daytona/pkg/logging"
 	"github.com/cruise-automation/daytona/pkg/pki"
 	"github.com/cruise-automation/daytona/pkg/secrets"
 	"github.com/hashicorp/vault/api"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var config cfg.Config
@@ -119,11 +121,11 @@ func init() {
 	flag.IntVar(&config.Workers, "workers", func() int {
 		b, err := strconv.ParseInt(cfg.BuildDefaultConfigItem("WORKERS", "1"), 10, 64)
 		if err != nil {
-			log.Fatal("WORKERS environment variable must be a valid value")
+			log.Fatal().Msg("WORKERS environment variable must be a valid value")
 		}
 
 		if b < 1 || b > 5 {
-			log.Fatal("-workers must be greater than zero and less than 5")
+			log.Fatal().Msg("-workers must be greater than zero and less than 5")
 		}
 		return int(b)
 	}(), "how many workers to run to read secrets in parallel (env: WORKERS) (Max: 5)")
@@ -136,53 +138,67 @@ func init() {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("PKI_USE_CA_CHAIN", "false"))
 		return err == nil && b
 	}(), "if set, retrieve the CA chain and include it in the certificate file output (env: PKI_USE_CA_CHAIN)")
+	flag.StringVar(&config.Log.Level, "log-level", cfg.BuildDefaultConfigItem(logging.EnvLevel, "debug"), "defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: "+logging.EnvLevel+")")
+	flag.StringVar(&config.Log.LevelFieldName, "log-level-field-name", cfg.BuildDefaultConfigItem("LOG_LEVEL_FIELD_NAME", zerolog.LevelFieldName), " the field name used for the level field (env: LOG_LEVEL_FIELD_NAME)")
+	flag.BoolVar(&config.Log.Structured, "log-structured", func() bool {
+		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("LOG_STRUCTURED", "true"))
+		return err == nil && b
+	}(), "if set, log output will be JSON else writes human-friendly format (env: LOG_STRUCTURED)")
 }
 
 func main() {
-	log.SetPrefix("DAYTONA - ")
-	log.Printf("Starting %s...\n", version)
 	flag.Parse()
+	logging.Setup(config.Log)
+	log.Info().Str("version", version).Msg("Starting ...")
 
 	if !config.ValidateAuthType() {
-		log.Fatalf("You must provide an auth method: -%s or -%s or -%s\n", flagK8SAuth, flagAWSIAMAuth, flagGCPAuth)
+		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth}).Msg("You must provide an auth method")
 	}
 
+	var mountPath string
 	switch {
 	case config.K8SAuth:
 		auth.InferK8SConfig(&config)
-		config.BuildAuthMountPath(config.K8SAuthMount)
+		mountPath = config.K8SAuthMount
 	case config.AWSAuth:
-		config.BuildAuthMountPath(config.AWSAuthMount)
+		mountPath = config.AWSAuthMount
 	case config.GCPAuth:
-		config.BuildAuthMountPath(config.GCPAuthMount)
+		mountPath = config.GCPAuthMount
 	}
+	config.BuildAuthMountPath(mountPath)
 
 	if err := config.ValidateConfig(); err != nil {
-		log.Fatalln(err.Error())
+		log.Fatal().Err(err).Msg("Invalid configuration")
 	}
 
 	fullTokenPath, err := homedir.Expand(config.TokenPath)
 	if err != nil {
-		log.Println("Could not expand", config.TokenPath, "using it as-is")
+		log.Warn().Str("tokenPath", config.TokenPath).Msg("Could not expand token path using it as-is")
 	} else {
 		config.TokenPath = fullTokenPath
 	}
 	if f, err := os.Stat(config.TokenPath); err == nil && f.IsDir() {
-		log.Println("The provided token path is a directory, automatically appending .vault-token filename")
+		log.Warn().Msg("The provided token path is a directory, automatically appending .vault-token filename")
 		config.TokenPath = filepath.Join(config.TokenPath, ".vault-token")
 	}
 
 	vaultConfig := api.DefaultConfig()
+
+	// Set the MaxRetries for rate-limited requests to a higher default, but allow
+	// users to override this default by using the VAULT_MAX_RETRIES env var
+	vaultConfig.MaxRetries = 5
+	vaultConfig.ReadEnvironment()
+
 	if config.VaultAddress != "" {
 		vaultConfig.Address = config.VaultAddress
 	}
 	client, err := api.NewClient(vaultConfig)
 	if err != nil {
-		log.Fatalf("Could not configure vault client. error: %s\n", err)
+		log.Fatal().Err(err).Msg("Could not configure vault client")
 	}
 
 	if !auth.EnsureAuthenticated(client, config) {
-		log.Fatalln("The maximum elapsed time has been reached for authentication attempts. exiting.")
+		log.Fatal().Msg("The maximum elapsed time has been reached for authentication attempts. exiting.")
 	}
 
 	secrets.SecretFetcher(client, config)
@@ -210,16 +226,16 @@ func main() {
 	if config.Entrypoint {
 		args := flag.Args()
 		if len(args) == 0 {
-			log.Fatalln("No arguments detected with use of -entrypoint")
+			log.Fatal().Msg("No arguments detected with use of -entrypoint")
 		}
-		log.Println("Will exec: ", args)
+		log.Info().Strs("args", args).Msg("Will exec")
 		binary, err := exec.LookPath(args[0])
 		if err != nil {
-			log.Fatalf("Error finding '%s' to exec: %s\n", args[0], err)
+			log.Fatal().Err(err).Str("binary", args[0]).Msg("Unable to find binary to exec")
 		}
 		err = syscall.Exec(binary, args, os.Environ())
 		if err != nil {
-			log.Fatalf("Error from exec: %s\n", err)
+			log.Fatal().Err(err).Msg("Error from exec")
 		}
 	}
 }

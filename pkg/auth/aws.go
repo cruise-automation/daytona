@@ -1,5 +1,5 @@
 /*
-Copyright 2019 GM Cruise LLC
+Copyright 2019-present, Cruise LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,13 +20,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // AWSService is an external service that vault can authenticate requests against
@@ -34,7 +34,7 @@ type AWSService struct{}
 
 // Auth is used to authenticate to an external service
 func (a *AWSService) Auth(client *api.Client, config cfg.Config) (string, error) {
-	log.Println("attempting aws iam auth..")
+	log.Info().Msg("attempting aws iam auth..")
 	loginData := make(map[string]interface{})
 	stsSession, err := session.NewSession(&aws.Config{
 		MaxRetries: aws.Int(5),

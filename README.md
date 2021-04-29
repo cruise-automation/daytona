@@ -1,3 +1,5 @@
+[![Testing](https://github.com/cruise-automation/daytona/actions/workflows/main.yml/badge.svg)](https://github.com/cruise-automation/daytona/actions/workflows/main.yml)
+
 ![DAYTONA](project/images/logo.png)
 
 This is intended to be a lighter, alternative, implementation of the Vault client CLI primarily for services and containers. Its core features are the ability to automate authentication, fetching of secrets, and automated token renewal.
@@ -87,7 +89,7 @@ Result
 
 ---
 
-**Plurar Secrets**
+**Plural Secrets**
 
 Vault Data
 
@@ -119,7 +121,7 @@ DAYTONA_SECRET_DESTINATION_THING=/tmp/top-secret-many
 
 Result
 
-`/tmp/top-secret` would be populated with:
+`/tmp/top-secret-many` would be populated with:
 
 ```json
 {
@@ -134,9 +136,9 @@ Result
 
 Fetched secrets can be output via the following methods:
 
-- `-secret-path` Specifies a file which to output a JSON representation of a fetched secret(s)
 - `DAYTONA_SECRET_DESTINATION_` The secret destination prefix as specified above
 - Enviornment variables via `-secret-env`. Because docker containers cannot set eachother's environment variables, `-secret-env` will have no effect unless used with the `-entrypoint` flag, so that any populated environment variables are passed to a provided executable.
+- `-secret-path` **(Deprecated)** Specifies a file which to output a JSON representation of a fetched secret(s)
 
 
 #### Data and Secret Key Layout
@@ -151,7 +153,7 @@ the secret `secret/path/to/database` should have its data stored as:
 }
 ```
 
-If `-secret-env` is supplied at runtime, the above example would be written to an environment variable as `DATABASE=databasepassword`, while `-secret-path /tmp/secrets` would be written to a file as:
+If `-secret-env` is supplied at runtime, the above example would be written to an environment variable as `DATABASE=databasepassword`, while `DAYTONA_SECRET_DESTINATION_PATH=/tmp/secrets` would be written to a file as:
 
 ```
 {
@@ -254,9 +256,9 @@ spec:
         value: /home/vault/.vault-token
       - name: VAULT_AUTH_ROLE
         value: awesome-app-vault-role-name
-      - name: SECRET_PATH
+      - name: DAYTONA_SECRET_DESTINATION_PATH
         value: /home/vault/secrets
-      - name: VAULT_SECRETS_APP
+      - name: VAULT_SECRETS_PATH
         value: secret/path/to/app
       - name: VAULT_SECRETS_GLOBAL
         value: secret/path/to/global/metrics
@@ -317,7 +319,7 @@ Assume you have the following Vault AWS Auth Role, `vault-role-name`:
 }
 ```
 
-`VAULT_SECRETS_TEST=secret/path/to/app/secrets daytona -iam-auth -token-path /home/vault/.vault-token -vault-auth-role vault-role-name -secret-path /home/vault/secrets`
+`VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -iam-auth -token-path /home/vault/.vault-token -vault-auth-role vault-role-name`
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
 
@@ -410,7 +412,7 @@ Assume you have the following Vault GCP Auth Role:
 }
 ```
 
-`VAULT_SECRETS_TEST=secret/path/to/app/secrets daytona -gcp-auth -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name -secret-path /home/vault/secrets`
+`VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -gcp-auth -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name`
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
 
@@ -462,6 +464,7 @@ Usage
 Usage of ./daytona:
   -address string
       Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied
+  -auth-mount string
   -auto-renew
       if enabled, starts the token renewal service (env: AUTO_RENEW)
   -aws-auth
@@ -486,6 +489,12 @@ Usage of ./daytona:
       the vault mount where k8s auth takes place (env: K8S_AUTH_MOUNT, note: will infer via k8s metadata api if left unset) (default "kubernetes")
   -k8s-token-path string
       kubernetes service account jtw token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
+  -log-level string
+      defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: LOG_LEVEL) (default "debug")
+  -log-level-field-name string
+      the field name used for the level field (env: LOG_LEVEL_FIELD_NAME) (default "level")
+  -log-structured
+      if set, log output will be JSON else writes human-friendly format (env: LOG_STRUCTURED) (default true)
   -max-auth-duration int
       the value, in seconds, for which DAYTONA should attempt to renew a token before exiting (env: MAX_AUTH_DURATION) (default 300)
   -pki-cert string
@@ -509,11 +518,13 @@ Usage of ./daytona:
   -secret-env
       write secrets to environment variables (env: SECRET_ENV)
   -secret-path string
-      the full file path to store the JSON blob of the fetched secrets (env: SECRET_PATH)
+      (deprecated) the full file path to store the JSON blob of the fetched secrets (env: SECRET_PATH)
   -token-path string
       a full file path where a token will be read from/written to (env: TOKEN_PATH) (default "~/.vault-token")
   -vault-auth-role string
       the name of the role used for auth. used with either auth method (env: VAULT_AUTH_ROLE, note: will infer to k8s sa account name if left blank)
+  -workers int
+      how many workers to run to read secrets in parallel (env: WORKERS) (Max: 5) (default 1)
 ```
 
 #### Deployment
@@ -539,7 +550,7 @@ make build
 
 # License
 
-Copyright 2019 GM Cruise LLC
+Copyright 2019-present, Cruise LLC
 
 Licensed under the [Apache License Version 2.0](LICENSE) (the "License");
 you may not use this project except in compliance with the License.

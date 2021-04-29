@@ -1,5 +1,5 @@
 /*
-Copyright 2019 GM Cruise LLC
+Copyright 2019-present, Cruise LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,21 +19,21 @@ package pki
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"strings"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
+	"github.com/cruise-automation/daytona/pkg/helpers"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 // CertFetcher is responsible for fetching certificates & keys..
 func CertFetcher(client *api.Client, config cfg.Config) {
 	if config.PkiCertificate == "" || config.PkiPrivateKey == "" {
-		log.Println("Certificate or private key output path is empty, will not attempt to get certificate")
+		log.Info().Msg("Certificate or private key output path is empty, will not attempt to get certificate")
 		return
 	}
-	log.Println("Getting certificate from vault...")
+	log.Info().Msg("Getting certificate from vault...")
 
 	cnData := map[string]interface{}{}
 
@@ -54,11 +54,11 @@ func CertFetcher(client *api.Client, config cfg.Config) {
 	path := config.PkiIssuer + "/issue/" + config.PkiRole
 	resp, err := client.Logical().Write(path, cnData)
 	if err != nil {
-		log.Panicf("Error requesting cert from Vault: %s", err)
+		log.Panic().Err(err).Msg("Error requesting cert from Vault")
 	}
 	err = writeCertData(resp, config.PkiCertificate, config.PkiPrivateKey, config.PkiUseCaChain)
 	if err != nil {
-		log.Panicf("Error while writing cert data: %s", err)
+		log.Panic().Err(err).Msg("Error while writing cert data")
 	}
 }
 
@@ -73,12 +73,12 @@ func writeCertData(resp *api.Secret, certFile string, keyFile string, useCaChain
 		}
 	}
 
-	err := ioutil.WriteFile(certFile, []byte(certificate.String()), 0600)
+	err := helpers.WriteFile(certFile, certificate.Bytes(), 0600)
 	if err != nil {
 		return fmt.Errorf("could not write certificate to file '%s': %s", certFile, err)
 	}
 
-	err = ioutil.WriteFile(keyFile, []byte(resp.Data["private_key"].(string)), 0600)
+	err = helpers.WriteFile(keyFile, []byte(resp.Data["private_key"].(string)), 0600)
 	if err != nil {
 		return fmt.Errorf("could not write private key to file '%s': %s", keyFile, err)
 	}
