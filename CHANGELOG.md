@@ -1,4 +1,4 @@
-## 1.1.5 - Unreleased
+## 1.1.5 - Apr 29, 2021
 
 - Update to go 1.16
 - Address a potential deadlock in the parallel secret reader
