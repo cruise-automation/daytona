@@ -4,11 +4,22 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/cruise-automation/daytona/pkg/logging"
 )
 
 type AuthMethod string
+
+func (a *AuthMethod) String() string {
+	return string(*a)
+}
+
+func (a *AuthMethod) Set(value string) error {
+	upperAuthMethod := strings.ToUpper(value)
+	*a = AuthMethod(upperAuthMethod)
+	return nil
+}
 
 // Auth methods
 const (

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,4 +51,20 @@ func TestValidateAuthType(t *testing.T) {
 	config.AuthMethod = "K8S"
 	ok = config.ValidateAuthType()
 	assert.True(t, ok, "expected auth type to be valid")
+}
+
+func TestAuthMethodParse(t *testing.T) {
+	authMethod := new(AuthMethod)
+	f := flag.NewFlagSet("test", flag.ContinueOnError)
+
+	f.Var(authMethod, "auth-method", "test")
+	args := []string{
+		"-auth-method",
+		"lowerCase",
+	}
+
+	err := f.Parse(args)
+	assert.NoError(t, err)
+	assert.True(t, f.Parsed(), "f.Parse() = false after Parse")
+	assert.Equal(t, "LOWERCASE", authMethod.String())
 }
