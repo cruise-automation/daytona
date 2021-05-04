@@ -280,7 +280,7 @@ spec:
       env:
       - name: AUTH_METHOD
         value: "k8S"
-      - name : K8S_AUTH_MOUNT
+      - name : AUTH_MOUNT
         value: "kubernetes-gcp-dev-cluster"
       - name: SECRET_ENV
         value: "true"
@@ -502,23 +502,18 @@ Usage
 Usage of ./daytona:
   -address string
       Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied
-  -auth-mount string
   -auto-renew
       if enabled, starts the token renewal service (env: AUTO_RENEW)
   -auth-method
       select between AWS, GCP, or K8S as the vault authentication mechanism (env: AUTH_METHOD)
   -entrypoint
       if enabled, execs the command after the separator (--) when done. mostly useful with -secret-env (env: ENTRYPOINT)
-  -gcp-auth-mount string
-      the vault mount where gcp auth takes place (env: GCP_AUTH_MOUNT) (default "gcp")
+  -auth-mount string
+      the vault mount where auth takes place (env: AUTH_MOUNT)
   -gcp-svc-acct string
       the name of the service account authenticating (env: GCP_SVC_ACCT)
-  -iam-auth-mount string
-      the vault mount where iam auth takes place (env: IAM_AUTH_MOUNT) (default "aws")
   -infinite-auth
       infinitely attempt to authenticate (env: INFINITE_AUTH)
-  -k8s-auth-mount string
-      the vault mount where k8s auth takes place (env: K8S_AUTH_MOUNT, note: will infer via k8s metadata api if left unset) (default "kubernetes")
   -k8s-token-path string
       kubernetes service account JWT token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
   -log-level string

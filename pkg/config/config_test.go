@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,44 +45,60 @@ func TestInvalidConfig(t *testing.T) {
 
 func TestValidateAuthType(t *testing.T) {
 	var config Config
-	config.AuthMethod = "UNKNOWN"
+
+	// If not set try to pull from env
+	os.Setenv("AUTH_METHOD", "k8s")
 	ok := config.ValidateAuthType()
+	assert.True(t, ok, "expected auth type to be valid")
+	assert.Equal(t, "auth/kubernetes/login", config.AuthPath)
+
+	os.Setenv("AUTH_METHOD", "unknown")
+	config.AuthMethod = ""
+	config.AuthMount = ""
+	config.AuthPath = ""
+	ok = config.ValidateAuthType()
+	assert.False(t, ok, "expected auth type to be invalid")
+
+	config.AuthMethod = "UNKNOWN"
+	config.AuthMount = ""
+	config.AuthPath = ""
+	ok = config.ValidateAuthType()
 	assert.False(t, ok, "expected auth type to be invalid")
 
 	config.AuthMethod = "K8S"
 	config.AuthMount = ""
-	config.FullAuthMount = ""
+	config.AuthPath = ""
 	ok = config.ValidateAuthType()
 	assert.True(t, ok, "expected auth type to be valid")
-	assert.Equal(t, "auth/kubernetes/login", config.FullAuthMount)
+	assert.Equal(t, "auth/kubernetes/login", config.AuthPath)
 
 	config.AuthMethod = "AWS"
 	config.AuthMount = ""
-	config.FullAuthMount = ""
+	config.AuthPath = ""
 	ok = config.ValidateAuthType()
 	assert.True(t, ok, "expected auth type to be valid")
-	assert.Equal(t, "auth/aws/login", config.FullAuthMount)
+	assert.Equal(t, "auth/aws/login", config.AuthPath)
 
 	config.AuthMethod = "GCP"
 	config.AuthMount = ""
-	config.FullAuthMount = ""
+	config.AuthPath = ""
 	ok = config.ValidateAuthType()
 	assert.True(t, ok, "expected auth type to be valid")
-	assert.Equal(t, "auth/gcp/login", config.FullAuthMount)
+	assert.Equal(t, "auth/gcp/login", config.AuthPath)
 
 	config.AuthMethod = "K8S"
 	config.AuthMount = "is-set"
-	config.FullAuthMount = ""
+	config.AuthPath = ""
 	ok = config.ValidateAuthType()
 	assert.True(t, ok, "expected auth type to be valid")
-	assert.Equal(t, "auth/is-set/login", config.FullAuthMount)
+	assert.Equal(t, "auth/is-set/login", config.AuthPath)
 
 	config.AuthMethod = "K8S"
 	config.AuthMount = ""
-	config.FullAuthMount = "is-set"
+	config.AuthPath = "is-set"
 	ok = config.ValidateAuthType()
 	assert.True(t, ok, "expected auth type to be valid")
-	assert.Equal(t, "is-set", config.FullAuthMount)
+	assert.Equal(t, "is-set", config.AuthPath)
 }
 
 func TestAuthMethodParse(t *testing.T) {

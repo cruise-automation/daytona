@@ -43,9 +43,8 @@ var version string
 
 func init() {
 	flag.Var(&config.AuthMethod, "auth-method", "Select between AWS, GCP, or K8S as the vault authentication mechanism (env: AUTH_METHOD)")
-	flag.StringVar(&config.AuthMount, "auth-mount", "", "The vault mount where auth takes place")
-	flag.StringVar(&config.FullAuthMount, "full-auth-mount", "", "The complete path for auth. If not provied one will be constructed from -auth-mount")
-
+	flag.StringVar(&config.AuthMount, "auth-mount", cfg.BuildDefaultConfigItem("AUTH_MOUNT", ""), "The vault mount where auth takes place (env: AUTH_MOUNT)")
+	flag.StringVar(&config.AuthPath, "auth-path", cfg.BuildDefaultConfigItem("AUTH_PATH", ""), "The complete path for auth. If not provied one will be constructed from -auth-mount")
 	flag.StringVar(&config.VaultAddress, "address", "", "Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied")
 	flag.StringVar(&config.TokenPath, "token-path", cfg.BuildDefaultConfigItem("TOKEN_PATH", "~/.vault-token"), "a full file path where a token will be read from/written to (env: TOKEN_PATH)")
 	flag.StringVar(&config.K8STokenPath, "k8s-token-path", cfg.BuildDefaultConfigItem("K8S_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"), "kubernetes service account jtw token path (env: K8S_TOKEN_PATH)")

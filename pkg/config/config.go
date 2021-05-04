@@ -36,7 +36,7 @@ type Config struct {
 	TokenPath         string
 	AuthMethod        AuthMethod
 	AuthMount         string
-	FullAuthMount     string
+	AuthPath          string
 	K8STokenPath      string
 	GCPServiceAccount string
 	VaultAuthRoleName string
@@ -71,6 +71,12 @@ func BuildDefaultConfigItem(envKey string, def string) (val string) {
 // ValidateAuthType validates that the user has supplied
 // a valid authentication type
 func (c *Config) ValidateAuthType() bool {
+
+	if c.AuthMethod == "" {
+		val := os.Getenv("AUTH_METHOD")
+		c.AuthMethod.Set(val)
+	}
+
 	switch c.AuthMethod {
 	case AuthMethodK8s, AuthMethodAWS, AuthMethodGCP:
 		break
@@ -90,8 +96,8 @@ func (c *Config) ValidateAuthType() bool {
 		}
 	}
 
-	if c.FullAuthMount == "" {
-		c.FullAuthMount = fmt.Sprintf(authPathFmtString, c.AuthMount)
+	if c.AuthPath == "" {
+		c.AuthPath = fmt.Sprintf(authPathFmtString, c.AuthMount)
 	}
 
 	return true

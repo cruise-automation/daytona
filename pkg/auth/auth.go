@@ -62,7 +62,7 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 }
 
 func fetchVaultToken(client *api.Client, config cfg.Config, loginData map[string]interface{}) (string, error) {
-	secret, err := client.Logical().Write(config.FullAuthMount, loginData)
+	secret, err := client.Logical().Write(config.AuthPath, loginData)
 	if err != nil {
 		return "", err
 	}
