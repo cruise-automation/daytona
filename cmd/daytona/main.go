@@ -23,7 +23,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/cruise-automation/daytona/pkg/auth"
@@ -42,14 +41,11 @@ var config cfg.Config
 // this is populated at build time
 var version string
 
-const (
-	flagAWSIAMAuth = "aws-auth"
-	flagK8SAuth    = "k8s-auth"
-	flagGCPAuth    = "gcp-auth"
-)
-
 func init() {
 	flag.Var(&config.AuthMethod, "auth-method", "Select between AWS, GCP, or K8S as the vault authentication mechanism (env: AUTH_METHOD)")
+	flag.StringVar(&config.AuthMount, "auth-mount", "", "The vault mount where auth takes place")
+	flag.StringVar(&config.FullAuthMount, "full-auth-mount", "", "The complete path for auth. If not provied one will be constructed from -auth-mount")
+
 	flag.StringVar(&config.VaultAddress, "address", "", "Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied")
 	flag.StringVar(&config.TokenPath, "token-path", cfg.BuildDefaultConfigItem("TOKEN_PATH", "~/.vault-token"), "a full file path where a token will be read from/written to (env: TOKEN_PATH)")
 	flag.StringVar(&config.K8STokenPath, "k8s-token-path", cfg.BuildDefaultConfigItem("K8S_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"), "kubernetes service account jtw token path (env: K8S_TOKEN_PATH)")
@@ -99,11 +95,7 @@ func init() {
 			return 300
 		}
 		return b
-	}(), "The value, in seconds, for which DAYTONA should attempt to renew a token before exiting (env: MAX_AUTH_DURATION)")
-	flag.StringVar(&config.K8SAuthMount, "k8s-auth-mount", cfg.BuildDefaultConfigItem("K8S_AUTH_MOUNT", "kubernetes"), "The vault mount where k8s auth takes place (env: K8S_AUTH_MOUNT, note: will infer via k8s metadata api if left unset)")
-	flag.StringVar(&config.AWSAuthMount, "iam-auth-mount", cfg.BuildDefaultConfigItem("IAM_AUTH_MOUNT", "aws"), "The vault mount where iam auth takes place (env: IAM_AUTH_MOUNT)")
-	flag.StringVar(&config.GCPAuthMount, "gcp-auth-mount", cfg.BuildDefaultConfigItem("GCP_AUTH_MOUNT", "gcp"), "The vault mount where gcp auth takes place (env: GCP_AUTH_MOUNT)")
-	flag.StringVar(&config.AuthMount, "auth-mount", cfg.BuildDefaultConfigItem("AUTH_MOUNT", ""), "")
+	}(), "the value, in seconds, for which DAYTONA should attempt to renew a token before exiting (env: MAX_AUTH_DURATION)")
 	flag.IntVar(&config.Workers, "workers", func() int {
 		b, err := strconv.ParseInt(cfg.BuildDefaultConfigItem("WORKERS", "1"), 10, 64)
 		if err != nil {
@@ -138,24 +130,8 @@ func main() {
 	log.Info().Str("version", version).Msg("Starting...")
 
 	if !config.ValidateAuthType() {
-		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth}).Msg("You must provide an auth method. Exiting.")
+		log.Fatal().Strs("authMethods", []string{string(cfg.AuthMethodK8s), string(cfg.AuthMethodAWS), string(cfg.AuthMethodGCP)}).Msg("You must provide an auth method")
 	}
-
-	var mountPath string
-	switch config.AuthMethod {
-	case cfg.AuthMethodK8s:
-		auth.InferK8SConfig(&config)
-		mountPath = config.K8SAuthMount
-	case cfg.AuthMethodAWS:
-		mountPath = config.AWSAuthMount
-	case cfg.AuthMethodGCP:
-		mountPath = config.GCPAuthMount
-	}
-
-	// =========================================================================
-	// Authentication with Vault
-	// =========================================================================
-	config.BuildAuthMountPath(mountPath)
 
 	if err := config.ValidateConfig(); err != nil {
 		log.Fatal().Err(err).Msg("Invalid configuration. Exiting.")

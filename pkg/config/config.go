@@ -35,10 +35,9 @@ type Config struct {
 	VaultAddress      string
 	TokenPath         string
 	AuthMethod        AuthMethod
+	AuthMount         string
+	FullAuthMount     string
 	K8STokenPath      string
-	K8SAuthMount      string
-	AWSAuthMount      string
-	GCPAuthMount      string
 	GCPServiceAccount string
 	VaultAuthRoleName string
 	RenewalThreshold  int64
@@ -51,7 +50,6 @@ type Config struct {
 	Entrypoint        bool
 	InfiniteAuth      bool
 	MaximumAuthRetry  int64
-	AuthMount         string
 	PkiIssuer         string
 	PkiRole           string
 	PkiDomains        string
@@ -75,10 +73,28 @@ func BuildDefaultConfigItem(envKey string, def string) (val string) {
 func (c *Config) ValidateAuthType() bool {
 	switch c.AuthMethod {
 	case AuthMethodK8s, AuthMethodAWS, AuthMethodGCP:
-		return true
+		break
 	default:
 		return false
 	}
+
+	// Set the default value for the authType
+	if c.AuthMount == "" {
+		switch c.AuthMethod {
+		case AuthMethodK8s:
+			c.AuthMount = "kubernetes"
+		case AuthMethodAWS:
+			c.AuthMount = "aws"
+		case AuthMethodGCP:
+			c.AuthMount = "gcp"
+		}
+	}
+
+	if c.FullAuthMount == "" {
+		c.FullAuthMount = fmt.Sprintf(authPathFmtString, c.AuthMount)
+	}
+
+	return true
 }
 
 // ValidateConfig attempts to perform some generic
@@ -96,12 +112,4 @@ func (c *Config) ValidateConfig() error {
 		return errors.New("one or more required PKI signing values are missing. PKI_ISSUER: " + c.PkiIssuer + ", PKI_ROLE: " + c.PkiRole + ", PKI_DOMAINS: " + c.PkiDomains + ", PKI_PRIVKEY: " + c.PkiPrivateKey + ", PKI_CERT: " + c.PkiCertificate)
 	}
 	return nil
-}
-
-// BuildAuthMountPath attempts to construct a mount path
-// if the provided one is empty
-func (c *Config) BuildAuthMountPath(path string) {
-	if c.AuthMount == "" {
-		c.AuthMount = fmt.Sprintf(authPathFmtString, path)
-	}
 }

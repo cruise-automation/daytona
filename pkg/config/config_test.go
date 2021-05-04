@@ -49,8 +49,39 @@ func TestValidateAuthType(t *testing.T) {
 	assert.False(t, ok, "expected auth type to be invalid")
 
 	config.AuthMethod = "K8S"
+	config.AuthMount = ""
+	config.FullAuthMount = ""
 	ok = config.ValidateAuthType()
 	assert.True(t, ok, "expected auth type to be valid")
+	assert.Equal(t, "auth/kubernetes/login", config.FullAuthMount)
+
+	config.AuthMethod = "AWS"
+	config.AuthMount = ""
+	config.FullAuthMount = ""
+	ok = config.ValidateAuthType()
+	assert.True(t, ok, "expected auth type to be valid")
+	assert.Equal(t, "auth/aws/login", config.FullAuthMount)
+
+	config.AuthMethod = "GCP"
+	config.AuthMount = ""
+	config.FullAuthMount = ""
+	ok = config.ValidateAuthType()
+	assert.True(t, ok, "expected auth type to be valid")
+	assert.Equal(t, "auth/gcp/login", config.FullAuthMount)
+
+	config.AuthMethod = "K8S"
+	config.AuthMount = "is-set"
+	config.FullAuthMount = ""
+	ok = config.ValidateAuthType()
+	assert.True(t, ok, "expected auth type to be valid")
+	assert.Equal(t, "auth/is-set/login", config.FullAuthMount)
+
+	config.AuthMethod = "K8S"
+	config.AuthMount = ""
+	config.FullAuthMount = "is-set"
+	ok = config.ValidateAuthType()
+	assert.True(t, ok, "expected auth type to be valid")
+	assert.Equal(t, "is-set", config.FullAuthMount)
 }
 
 func TestAuthMethodParse(t *testing.T) {
@@ -60,11 +91,11 @@ func TestAuthMethodParse(t *testing.T) {
 	f.Var(authMethod, "auth-method", "test")
 	args := []string{
 		"-auth-method",
-		"lowerCase",
+		"testAuth",
 	}
 
 	err := f.Parse(args)
 	assert.NoError(t, err)
 	assert.True(t, f.Parsed(), "f.Parse() = false after Parse")
-	assert.Equal(t, "LOWERCASE", authMethod.String())
+	assert.Equal(t, "TESTAUTH", authMethod.String())
 }
