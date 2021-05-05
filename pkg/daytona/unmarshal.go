@@ -89,7 +89,7 @@ func UnmarshalSecrets(client *api.Client, v interface{}, opts ...UnmarshalSecret
 		path, valueIndex := parsePath(config.apex, val.Type().Field(i).Tag)
 		switch f.Kind() {
 		case reflect.Struct:
-			err := UnmarshalSecrets(client, f.Addr().Interface(), WithApex(config.apex))
+			err := UnmarshalSecrets(client, f.Addr().Interface(), opts...)
 			if err != nil {
 				return err
 			}
