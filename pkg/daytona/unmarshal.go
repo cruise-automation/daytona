@@ -41,7 +41,7 @@ func WithApex(apex string) UnmarshalSecretsOption {
 type withApex string
 
 func (w withApex) apply(c *unmarshalSecretsConfig) {
-	c.apex = string(w)
+	c.apex = strings.TrimSuffix(string(w), "/")
 }
 
 // UnmarshalSecrets traverses the value v recursively looking for tagged fields that
@@ -217,7 +217,7 @@ func parsePath(apex string, tag reflect.StructTag) (path, valueIndex string) {
 		if apex != "" {
 			p, ok := tag.Lookup(vaultTagPathKey)
 			if ok {
-				path = fmt.Sprintf("%s/%s", strings.TrimSuffix(apex, "/"), p)
+				path = fmt.Sprintf("%s/%s", apex, p)
 			}
 		}
 	}
