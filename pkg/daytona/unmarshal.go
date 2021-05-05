@@ -23,9 +23,30 @@ const (
 
 var ErrValueInput = errors.New("the provided value must be a struct pointer")
 
+type unmarshalSecretsConfig struct {
+	apex string
+}
+
+// An UnmarshalSecretsOption is an option for the UnmarshalSecrets function
+type UnmarshalSecretsOption interface {
+	apply(c *unmarshalSecretsConfig)
+}
+
+// WithApex returns an UnmarshalSecretsOption sets the apex value
+// for which the secrets unmarshaler should use
+func WithApex(apex string) UnmarshalSecretsOption {
+	return withApex(apex)
+}
+
+type withApex string
+
+func (w withApex) apply(c *unmarshalSecretsConfig) {
+	c.apex = string(w)
+}
+
 // UnmarshalSecrets traverses the value v recursively looking for tagged fields that
-// can be populated with secret data using the provided client and optional apex.
-// If the apex is provided, the tag vault_path_key is appended to the apex to construct
+// can be populated with secret data using the provided client and optional configured apex.
+// If the apex is configured, the tag vault_path_key is appended to the apex to construct
 // the final secret path. If the tag vault_path is provided, the apex is ignored.
 // A default key of 'default' is used on each path, it can be overridden using the vault_key tag.
 //
@@ -38,7 +59,13 @@ var ErrValueInput = errors.New("the provided value must be a struct pointer")
 //  vault_path represents a full secret path to fetch
 //  Field string `vault_path:"secret/application/db_password"`
 //  Field string `vault_path:"secret/application/db_password" vault_key:"password"` // key override
-func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
+func UnmarshalSecrets(client *api.Client, v interface{}, opts ...UnmarshalSecretsOption) error {
+	config := unmarshalSecretsConfig{}
+
+	for _, opt := range opts {
+		opt.apply(&config)
+	}
+
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Ptr {
 		return ErrValueInput
@@ -59,10 +86,10 @@ func UnmarshalSecrets(client *api.Client, v interface{}, apex string) error {
 			f = f.Elem()
 		}
 
-		path, valueIndex := parsePath(apex, val.Type().Field(i).Tag)
+		path, valueIndex := parsePath(config.apex, val.Type().Field(i).Tag)
 		switch f.Kind() {
 		case reflect.Struct:
-			err := UnmarshalSecrets(client, f.Addr().Interface(), apex)
+			err := UnmarshalSecrets(client, f.Addr().Interface(), WithApex(config.apex))
 			if err != nil {
 				return err
 			}

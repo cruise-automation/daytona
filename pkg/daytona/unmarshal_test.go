@@ -52,27 +52,27 @@ func TestUnmarshalSecret(t *testing.T) {
 	}
 
 	empty := struct{}{}
-	err = UnmarshalSecrets(client, empty, "secret/application")
+	err = UnmarshalSecrets(client, empty, WithApex("secret/application"))
 	assert.Equal(t, ErrValueInput, err)
 
 	normal := struct {
 		Hello string
 	}{Hello: "hi!"}
-	err = UnmarshalSecrets(client, &normal, "secret/application")
+	err = UnmarshalSecrets(client, &normal, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "hi!", normal.Hello)
 
 	aFullPath := struct {
 		Password string `vault_path:"secret/application/password" vault_key:"password"`
 	}{}
-	err = UnmarshalSecrets(client, &aFullPath, "secret/lol")
+	err = UnmarshalSecrets(client, &aFullPath)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "nonstandard", aFullPath.Password)
 
 	stdApex := struct {
 		Password string `vault_path_key:"password"`
 	}{}
-	err = UnmarshalSecrets(client, &stdApex, "secret/application")
+	err = UnmarshalSecrets(client, &stdApex, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "standard", stdApex.Password)
 
@@ -81,93 +81,93 @@ func TestUnmarshalSecret(t *testing.T) {
 			PrivateKey string `vault_path_key:"password" vault_key:"private_key"`
 		}
 	}
-	err = UnmarshalSecrets(client, &embedded, "secret/application")
+	err = UnmarshalSecrets(client, &embedded, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "BEGIN PRIVATE KEY", embedded.Nested.PrivateKey)
 
 	aBadString := struct {
 		aBadString string `vault_path_key:"password" vault_key:"a_bad_string"`
 	}{}
-	err = UnmarshalSecrets(client, &aBadString, "secret/application")
+	err = UnmarshalSecrets(client, &aBadString, WithApex("secret/application"))
 	assert.NotNil(t, err)
 
 	goodDuration := struct {
 		ADuration time.Duration `vault_path_key:"password" vault_key:"a_duration"`
 	}{}
-	err = UnmarshalSecrets(client, &goodDuration, "secret/application")
+	err = UnmarshalSecrets(client, &goodDuration, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, time.Hour*7, goodDuration.ADuration)
 
 	invalidDuration := struct {
 		ADuration time.Duration `vault_path_key:"password" vault_key:"a_bad_duration"`
 	}{}
-	err = UnmarshalSecrets(client, &invalidDuration, "secret/application")
+	err = UnmarshalSecrets(client, &invalidDuration, WithApex("secret/application"))
 	assert.Equal(t, `time: invalid duration "hello"`, err.Error())
 
 	aFloat := struct {
 		AFloat float64 `vault_path_key:"password" vault_key:"a_float"`
 	}{}
-	err = UnmarshalSecrets(client, &aFloat, "secret/application")
+	err = UnmarshalSecrets(client, &aFloat, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 6.66, aFloat.AFloat)
 
 	aStringFloat := struct {
 		AFloat float64 `vault_path_key:"password" vault_key:"a_string_float"`
 	}{}
-	err = UnmarshalSecrets(client, &aStringFloat, "secret/application")
+	err = UnmarshalSecrets(client, &aStringFloat, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 6.66, aStringFloat.AFloat)
 
 	aBadFloat := struct {
 		aBadFloat float64 `vault_path_key:"password" vault_key:"a_bad_float"`
 	}{}
-	err = UnmarshalSecrets(client, &aBadFloat, "secret/application")
+	err = UnmarshalSecrets(client, &aBadFloat, WithApex("secret/application"))
 	assert.NotNil(t, err)
 
 	anInteger := struct {
 		AnInteger int64 `vault_path_key:"password" vault_key:"an_int"`
 	}{}
-	err = UnmarshalSecrets(client, &anInteger, "secret/application")
+	err = UnmarshalSecrets(client, &anInteger, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, int64(12), anInteger.AnInteger)
 
 	aStringInteger := struct {
 		AStringInteger int64 `vault_path_key:"password" vault_key:"a_string_int"`
 	}{}
-	err = UnmarshalSecrets(client, &aStringInteger, "secret/application")
+	err = UnmarshalSecrets(client, &aStringInteger, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, int64(12), aStringInteger.AStringInteger)
 
 	aBadInt := struct {
 		aBadInt int64 `vault_path_key:"password" vault_key:"a_bad_int"`
 	}{}
-	err = UnmarshalSecrets(client, &aBadInt, "secret/application")
+	err = UnmarshalSecrets(client, &aBadInt, WithApex("secret/application"))
 	assert.NotNil(t, err)
 
 	aBool := struct {
 		ABool bool `vault_path_key:"password" vault_key:"a_bool"`
 	}{}
-	err = UnmarshalSecrets(client, &aBool, "secret/application")
+	err = UnmarshalSecrets(client, &aBool, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, aBool.ABool)
 
 	aStringBool := struct {
 		AStringBool bool `vault_path_key:"password" vault_key:"a_string_bool"`
 	}{}
-	err = UnmarshalSecrets(client, &aStringBool, "secret/application")
+	err = UnmarshalSecrets(client, &aStringBool, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, aStringBool.AStringBool)
 
 	aBadBool := struct {
 		aBadBool bool `vault_path_key:"password" vault_key:"a_bad_bool"`
 	}{}
-	err = UnmarshalSecrets(client, &aBadBool, "secret/application")
+	err = UnmarshalSecrets(client, &aBadBool, WithApex("secret/application"))
 	assert.NotNil(t, err)
 
 	aMisMatch := struct {
 		AMismatch float64 `vault_path_key:"password" vault_key:"a_mismatch"`
 	}{}
-	err = UnmarshalSecrets(client, &aMisMatch, "secret/application")
+	err = UnmarshalSecrets(client, &aMisMatch, WithApex("secret/application"))
 	assert.Equal(t, `strconv.ParseFloat: parsing "7xL": invalid syntax`, err.Error())
 
 	type x struct {
@@ -176,7 +176,7 @@ func TestUnmarshalSecret(t *testing.T) {
 	aThing := struct {
 		Thingy *x
 	}{}
-	err = UnmarshalSecrets(client, &aThing, "secret/application")
+	err = UnmarshalSecrets(client, &aThing, WithApex("secret/application"))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -185,7 +185,7 @@ func TestUnmarshalSecret(t *testing.T) {
 	aPtrField := struct {
 		Password *string `vault_path_key:"password"`
 	}{}
-	err = UnmarshalSecrets(client, &aPtrField, "secret/application")
+	err = UnmarshalSecrets(client, &aPtrField, WithApex("secret/application"))
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "standard", *aPtrField.Password)
 }
