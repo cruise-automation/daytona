@@ -42,7 +42,7 @@ lint:
 
 build:
 	CGO_ENABLED=0 go build ${GO_LDFLAGS} -o daytona cmd/daytona/main.go
-	command -v upx && upx daytona || echo "[INFO] No upx installed, not compressing."
+	@command -v upx && upx daytona || echo "[INFO] No upx installed, not compressing."
 
 image: check
 	docker build -t daytona:${VERSION_TAG} .
