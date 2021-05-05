@@ -45,11 +45,15 @@ The following authentication methods are supported:
 
 `<STORAGE PATH PREFIX>_<secretID-SUFFIX>=<SECRET-APEX>`
 
-- `VAULT_SECRET_`: Singular Secret Storage Path Prefix
-- `VAULT_SECRETS_`: Plural (more than 1 secret beneath the specified path) Secret Storage Path Prefix
+- `VAULT_SECRET_` (`<STORAGE PATH PREFIX>`): Singular Secret Storage Path Prefix
+- `VAULT_SECRETS_` (`<STORAGE PATH PREFIX>`): Plural (more than 1 secret beneath the specified path) Secret Storage Path Prefix
 - `secretID-SUFFIX`: The unique secret identifier that can be used to tie a Secret Storage Path Prefix to a corresponding Destination Prefix. The uniqueness of this value provides the ability to supply multiple secret paths.
-- `SECRET-APEX`: When used with **Singular** definitions,  the Vault path where the secret exists in Vault that can be read. When used with **Plural** definitions, the Vault path where the secrets exist in Vault that can be listed and then read. This will fetch all secrets within the given Vault directory.
-- `DAYTONA_SECRET_DESTINATION_`: (OPTIONAL) Secret Destination Prefix. This is a full file path location where the corresponding secret from the supplied storage path is written to.
+- `SECRET-APEX`: When used with **Singular** definitions, the Vault path where the secret exists in Vault that can be read. When used with **Plural** definitions, the Vault path where the secrets exist in Vault that can be listed and then read. This will fetch all secrets within the given Vault directory.
+
+**Secret Definition Options**
+
+- `DAYTONA_SECRET_DESTINATION_`: Secret Destination Prefix. This is a full file path location where the corresponding secret from the supplied storage path is written to. Usage: `DAYTONA_SECRET_DESTINATION_<secretID-SUFFIX>=/path/to/file`
+- `VAULT_VALUE_KEY_`: Can be used to indicate the retrieval of a single key from a singular secret definition. Usage: `VAULT_VAULT_KEY_<secretID-SUFFIX>=api_key`
 
 **Singular Secrets**
 - Singular Secret Declaration: `VAULT_SECRET_<secretID-SUFFIX>=<SECRET-APEX>`
@@ -86,6 +90,34 @@ DAYTONA_SECRET_DESTINATION_THING=/tmp/top-secret
 Result
 
 `hello` would be written to the file `/tmp/top-secret`
+
+---
+
+**Singular Secret w/Specific Key**
+
+Vault Data
+
+```shell
+$ vault read secret/whatever/thing
+
+Key                 Value
+---                 -----
+refresh_interval    768h
+value               hello
+api_key             potato1234
+```
+
+Secret Definition
+
+```shell
+VAULT_SECRET_THING=secret/whatever/thing
+DAYTONA_SECRET_DESTINATION_THING=/tmp/top-secret
+VAULT_VALUE_KEY_THING=api_key
+```
+
+Result
+
+`potato1234` would be written to the file `/tmp/top-secret`
 
 ---
 
