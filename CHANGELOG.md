@@ -1,3 +1,7 @@
+## 1.1.6 - May 10, 2021
+
+- Address a defect with the parsing & handling of alt_names (#76)
+
 ## 1.1.5 - Apr 29, 2021
 
 - Update to go 1.16

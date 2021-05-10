@@ -447,11 +447,11 @@ func testHandler() http.Handler {
 			if strings.HasSuffix(r.URL.Path, "correct-role") {
 				decoder := json.NewDecoder(r.Body)
 				tstr := struct {
-					Alt_names   []string `json:"alt_names"`
-					Common_name string   `json:"common_name"`
+					Alt_names   string `json:"alt_names"`
+					Common_name string `json:"common_name"`
 				}{}
 				_ = decoder.Decode(&tstr)
-				if len(tstr.Alt_names) > 1 {
+				if len(strings.Split(tstr.Alt_names, ",")) > 1 {
 					fmt.Fprintln(w, testPkiIssueResponseMultipleDomain)
 				} else {
 					fmt.Fprintln(w, testPkiIssueResponseSingleDomain)
