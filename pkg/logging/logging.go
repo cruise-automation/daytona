@@ -8,8 +8,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const EnvLevel = "LOG_LEVEL"
-
 type Config struct {
 	Structured     bool
 	Level          string

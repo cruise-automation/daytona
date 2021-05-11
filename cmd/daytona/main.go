@@ -138,10 +138,10 @@ func init() {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("PKI_USE_CA_CHAIN", "false"))
 		return err == nil && b
 	}(), "if set, retrieve the CA chain and include it in the certificate file output (env: PKI_USE_CA_CHAIN)")
-	flag.StringVar(&config.Log.Level, "log-level", cfg.BuildDefaultConfigItem(logging.EnvLevel, "debug"), "defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: "+logging.EnvLevel+")")
-	flag.StringVar(&config.Log.LevelFieldName, "log-level-field-name", cfg.BuildDefaultConfigItem("LOG_LEVEL_FIELD_NAME", zerolog.LevelFieldName), " the field name used for the level field (env: LOG_LEVEL_FIELD_NAME)")
+	flag.StringVar(&config.Log.Level, "log-level", cfg.BuildDefaultConfigItem("DAYTONA_LOG_LEVEL", "debug"), "defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: DAYTONA_LOG_LEVEL)")
+	flag.StringVar(&config.Log.LevelFieldName, "log-level-field-name", cfg.BuildDefaultConfigItem("DAYTONA_LOG_LEVEL_FIELD_NAME", zerolog.LevelFieldName), " the field name used for the level field (env: DAYTONA_LOG_LEVEL_FIELD_NAME)")
 	flag.BoolVar(&config.Log.Structured, "log-structured", func() bool {
-		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("LOG_STRUCTURED", "true"))
+		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("DAYTONA_LOG_STRUCTURED", "true"))
 		return err == nil && b
 	}(), "if set, log output will be JSON else writes human-friendly format (env: LOG_STRUCTURED)")
 }
