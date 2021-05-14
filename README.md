@@ -4,9 +4,9 @@
 
 This is intended to be a lighter, alternative, implementation of the Vault client CLI primarily for services and containers. Its core features are the ability to automate authentication, fetching of secrets, and automated token renewal.
 
-Previously authentication to, and secret retrevial from, Vault via a server or container was a delicate balance of shell scripts or potentially lengthy http implementations, similar to:
+Previously authentication to, and secret retrieval from, Vault via a server or container was a delicate balance of shell scripts or potentially lengthy http implementations, similar to:
 
-```
+```shell
 vault login -token-only -method=$METHOD role=$VAULT_ROLE"
 THING="$(vault read -field=key secret/path/to/thing)"
 ANOTHER_THING="$(vault read -field=key secret/path/to/another/thing)"
@@ -169,7 +169,7 @@ Result
 Fetched secrets can be output via the following methods:
 
 - `DAYTONA_SECRET_DESTINATION_` The secret destination prefix as specified above
-- Enviornment variables via `-secret-env`. Because docker containers cannot set eachother's environment variables, `-secret-env` will have no effect unless used with the `-entrypoint` flag, so that any populated environment variables are passed to a provided executable.
+- Environment variables via `-secret-env`. Because docker containers cannot set each other's environment variables, `-secret-env` will have no effect unless used with the `-entrypoint` flag, so that any populated environment variables are passed to a provided executable.
 - `-secret-path` **(Deprecated)** Specifies a file which to output a JSON representation of a fetched secret(s)
 
 
@@ -179,7 +179,7 @@ Fetched secrets can be output via the following methods:
 
 the secret `secret/path/to/database` should have its data stored as:
 
-```
+```json
 {
   "value": "databasepassword"
 }
@@ -187,7 +187,7 @@ the secret `secret/path/to/database` should have its data stored as:
 
 If `-secret-env` is supplied at runtime, the above example would be written to an environment variable as `DATABASE=databasepassword`, while `DAYTONA_SECRET_DESTINATION_PATH=/tmp/secrets` would be written to a file as:
 
-```
+```json
 {
   "database": "password"
 }
@@ -195,7 +195,7 @@ If `-secret-env` is supplied at runtime, the above example would be written to a
 
 If data within a secret is stored as multiple key-values, which is the **`non-preferred`** format, then the secret data will be stored as a combination of `SECRETNAME_DATAKEYNAME=value`. For example, if the Vault secret `secret/path/to/database` has multiple key-values:
 
-```
+```json
 {
   "db_username": "foo",
   "db_password": "databasepassword"
@@ -204,7 +204,7 @@ If data within a secret is stored as multiple key-values, which is the **`non-pr
 
 then a secret's data will be fetched by `daytona`, and stored as variables `DATABASE_DB_USERNAME=foo` and `DATABASE_DB_password=databasepassword`, or respectively, written to a file as:
 
-```
+```json
 {
   "database_db_username": "foo",
   "database_db_password": "databasepassword"
@@ -300,7 +300,7 @@ Note the `securityContext` provided above. Without it, the daytona container run
 
 The example above, assuming a successful authentication, would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
 
-```
+```json
 {
   "api_key": "supersecret",
   "database": "databasepassword",
@@ -312,7 +312,7 @@ the secrets written above would be the representation of the following vault dat
 
 `secret/path/to/app/api_key`
 
-```
+```json
 {
   "value": "supersecret"
 }
@@ -320,7 +320,7 @@ the secrets written above would be the representation of the following vault dat
 
 `secret/path/to/app/database`
 
-```
+```json
 {
   "value": "databasepassword"
 }
@@ -328,7 +328,7 @@ the secrets written above would be the representation of the following vault dat
 
 `secret/path/to/global/metrics`
 
-```
+```json
 {
   "value": "helloworld"
 }
@@ -339,7 +339,7 @@ the secrets written above would be the representation of the following vault dat
 
 Assume you have the following Vault AWS Auth Role, `vault-role-name`:
 
-```
+```json
 {
   "auth_type": "iam",
   "bound_iam_principal_arn": [
@@ -351,11 +351,13 @@ Assume you have the following Vault AWS Auth Role, `vault-role-name`:
 }
 ```
 
-`VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -iam-auth -token-path /home/vault/.vault-token -vault-auth-role vault-role-name`
+```
+VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -iam-auth -token-path /home/vault/.vault-token -vault-auth-role vault-role-name
+```
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
 
-```
+```json
 {
   "secrets_secretA": "hellooo",
   "secrets_api_key": "supersecret"
@@ -376,7 +378,8 @@ as a representation of the following vault data:
 **AWS IAM Example - As a container entrypoint**:
 
 In a `Dockerfile`:
-```
+
+```dockerfile
 ENTRYPOINT [ "./daytona", "-secret-env", "-iam-auth", "-vault-auth-role", "vault-role-name", "-entrypoint", "--" ]
 ```
 
@@ -386,7 +389,7 @@ combined with supplying the following during a `docker run`:
 
 would yield the following environment variables in a container:
 
-```
+```ini
 API_KEY=supersecret
 DATABASE=databasepassword
 ```
@@ -395,7 +398,7 @@ as a representation of the following vault data:
 
 `secret/path/to/app/api_key`
 
-```
+```json
 {
   "value": "supersecret"
 }
@@ -403,7 +406,7 @@ as a representation of the following vault data:
 
 `secret/path/to/app/database`
 
-```
+```json
 {
   "value": "databasepassword"
 }
@@ -412,7 +415,8 @@ as a representation of the following vault data:
 **AWS IAM Example - As a container entrypoint, for requesting a PKI certificate**:
 
 In a `Dockerfile`:
-```
+
+```dockerfile
 ENTRYPOINT [ "./daytona", "-iam-auth", "-vault-auth-role", "vault-role-name", "-pki-issuer", "pki-backend", "-pki-role", "my-role", "-pki-domains", "www.example.com", "-pki-cert", "/etc/cert.pem", "-pki-privkey", "/etc/key.pem", "-pki-use-ca-chain", -entrypoint", "--" ]
 ```
 
@@ -429,7 +433,7 @@ N.b.:
 
 Assume you have the following Vault GCP Auth Role:
 
-```
+```json
 {
     "bound_projects": [
         "my-project"
@@ -444,11 +448,13 @@ Assume you have the following Vault GCP Auth Role:
 }
 ```
 
-`VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -gcp-auth -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name`
+```
+VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -gcp-auth -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name
+```
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
 
-```
+```json
 {
   "secrets_secretA": "hellooo",
   "secrets_api_key": "supersecret"
@@ -459,7 +465,7 @@ as a representation of the following vault data:
 
 `secret/path/to/app/secrets`
 
-```
+```json
 {
   "secretA": "hellooo",
   "api_key": "supersecret"
@@ -520,7 +526,7 @@ Usage of ./daytona:
   -k8s-auth-mount string
       the vault mount where k8s auth takes place (env: K8S_AUTH_MOUNT, note: will infer via k8s metadata api if left unset) (default "kubernetes")
   -k8s-token-path string
-      kubernetes service account jtw token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
+      kubernetes service account JWT token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
   -log-level string
       defines log levels ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic', '') (env: LOG_LEVEL) (default "debug")
   -log-level-field-name string
@@ -563,20 +569,21 @@ Usage of ./daytona:
 
 DAYTONA is not deployed to any public image registry as we'd like to assume you're comfortable with deploying this somewhere that you trust.
 
-Building a docker image:
-```
+Building a Docker image:
+
+```shell
 make image
 ```
 
 Use the `REGISTRY` environment variable to define where you'd like the image to be pushed:
 
-```
+```shell
 REGISTRY=gcr.io/supa-fast-c432 make push-image
 ```
 
 Or, you can simply deploy the binary. It can be built via:
 
-```
+```shell
 make build
 ```
 

@@ -55,7 +55,7 @@ type SecretDefinition struct {
 
 // SecretFetcher inspects the environment for variables that
 // define secret definitions. The variables are used to guide
-// the SecretFetcher in acquring and outputting the specified secrets
+// the SecretFetcher in acquiring and outputting the specified secrets
 func SecretFetcher(client *api.Client, config cfg.Config) {
 	log.Info().Msg("Starting secret fetch")
 
