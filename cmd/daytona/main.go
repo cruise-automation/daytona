@@ -149,10 +149,10 @@ func init() {
 func main() {
 	flag.Parse()
 	logging.Setup(config.Log)
-	log.Info().Str("version", version).Msg("Starting ...")
+	log.Info().Str("version", version).Msg("Starting...")
 
 	if !config.ValidateAuthType() {
-		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth}).Msg("You must provide an auth method")
+		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth}).Msg("You must provide an auth method. Exiting.")
 	}
 
 	var mountPath string
@@ -166,45 +166,62 @@ func main() {
 		mountPath = config.GCPAuthMount
 	}
 
+	// =========================================================================
+	// Authentication with Vault
+	// =========================================================================
 	config.BuildAuthMountPath(mountPath)
 
 	if err := config.ValidateConfig(); err != nil {
-		log.Fatal().Err(err).Msg("Invalid configuration")
+		log.Fatal().Err(err).Msg("Invalid configuration. Exiting.")
 	}
 
 	fullTokenPath, err := homedir.Expand(config.TokenPath)
 	if err != nil {
-		log.Warn().Str("tokenPath", config.TokenPath).Msg("Could not expand token path using it as-is")
+		log.Warn().Str("tokenPath", config.TokenPath).Msg("Could not expand token path. Using path as-is.")
 	} else {
 		config.TokenPath = fullTokenPath
 	}
+
 	if f, err := os.Stat(config.TokenPath); err == nil && f.IsDir() {
 		log.Warn().Msg("The provided token path is a directory, automatically appending .vault-token filename")
+
 		config.TokenPath = filepath.Join(config.TokenPath, ".vault-token")
 	}
 
+	// =========================================================================
+	// Read in configuration
+	// =========================================================================
 	vaultConfig := api.DefaultConfig()
 
 	// Set the MaxRetries for rate-limited requests to a higher default, but allow
 	// users to override this default by using the VAULT_MAX_RETRIES env var
 	vaultConfig.MaxRetries = 5
-	vaultConfig.ReadEnvironment()
+
+	if err := vaultConfig.ReadEnvironment(); err != nil {
+		log.Warn().Msgf("Error returned from Vault ReadEnvironment: %s", err.Error())
+	}
 
 	if config.VaultAddress != "" {
 		vaultConfig.Address = config.VaultAddress
 	}
+
+	// Create a new Vault client
 	client, err := api.NewClient(vaultConfig)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Could not configure vault client")
+		log.Fatal().Err(err).Msg("Could not configure vault client. Exiting.")
 	}
 
 	if !auth.EnsureAuthenticated(client, config) {
-		log.Fatal().Msg("The maximum elapsed time has been reached for authentication attempts. exiting.")
+		log.Fatal().Msg("The maximum elapsed time has been reached for authentication attempts. Exiting.")
 	}
 
+	// Attempt to fetch secrets
 	secrets.SecretFetcher(client, config)
+
+	// Attempt to fetch certs
 	pki.CertFetcher(client, config)
 
+	// Create channel for re-authentication
 	if config.AutoRenew {
 		// if you send USR1, we'll re-fetch secrets
 		sigChan := make(chan os.Signal, 1)
@@ -224,19 +241,23 @@ func main() {
 		auth.RenewService(client, config)
 	}
 
+	// Execute commands if passed into the CLI
 	if config.Entrypoint {
 		args := flag.Args()
 		if len(args) == 0 {
-			log.Fatal().Msg("No arguments detected with use of -entrypoint")
+			log.Fatal().Msg("No arguments detected with use of -entrypoint. Exiting.")
 		}
+
 		log.Info().Strs("args", args).Msg("Will exec")
+
 		binary, err := exec.LookPath(args[0])
 		if err != nil {
-			log.Fatal().Err(err).Str("binary", args[0]).Msg("Unable to find binary to exec")
+			log.Fatal().Err(err).Str("binary", args[0]).Msg("Unable to find binary to exec. Exiting.")
 		}
+
 		err = syscall.Exec(binary, args, os.Environ())
 		if err != nil {
-			log.Fatal().Err(err).Msg("Error from exec")
+			log.Fatal().Err(err).Msg("Error from exec. Exiting.")
 		}
 	}
 }
