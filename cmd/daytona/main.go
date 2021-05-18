@@ -129,7 +129,7 @@ func main() {
 	log.Info().Str("version", version).Msg("Starting...")
 
 	if !config.ValidateAuthType() {
-		log.Fatal().Strs("authMethods", []string{string(cfg.AuthMethodK8s), string(cfg.AuthMethodAWS), string(cfg.AuthMethodGCP)}).Msg("You must provide an auth method")
+		log.Fatal().Strs("authMethods", auth.Authenticators.Available()).Msg("You must provide an auth method")
 	}
 
 	if err := config.ValidateConfig(); err != nil {
