@@ -28,6 +28,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+
 // K8SService is an external service that vault can authenticate requests against
 type K8SService struct{}
 
@@ -63,7 +64,7 @@ func InferK8SConfig(config *cfg.Config) {
 	}
 
 	// Check for default value
-	if config.AuthMount == "kubernetes" {
+	if config.AuthMount == cfg.DefaultK8sAuthMount {
 		vaultAuthMount, err := inferVaultAuthMount()
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to infer K8S Vault Auth Mount")

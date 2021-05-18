@@ -28,6 +28,12 @@ const (
 	AuthMethodGCP AuthMethod = "GCP"
 )
 
+const (
+	DefaultK8sAuthMount = "kubernetes"
+	DefaultAWSAuthMount = "aws"
+	DefaultGCPAuthMount = "gcp"
+)
+
 const authPathFmtString = "auth/%s/login"
 
 // Config represents an application configuration
@@ -88,11 +94,11 @@ func (c *Config) ValidateAuthType() bool {
 	if c.AuthMount == "" {
 		switch c.AuthMethod {
 		case AuthMethodK8s:
-			c.AuthMount = "kubernetes"
+			c.AuthMount = DefaultK8sAuthMount
 		case AuthMethodAWS:
-			c.AuthMount = "aws"
+			c.AuthMount = DefaultAWSAuthMount
 		case AuthMethodGCP:
-			c.AuthMount = "gcp"
+			c.AuthMount = DefaultGCPAuthMount
 		}
 	}
 
