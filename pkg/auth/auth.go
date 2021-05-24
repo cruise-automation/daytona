@@ -35,7 +35,7 @@ type Authenticator interface {
 	Auth(*api.Client, cfg.Config) (string, error)
 }
 
-// authenticate authenticates with Vault.
+// authenticate authenticates with Vault, returns true if successful
 func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool {
 	var vaultToken string
 	var err error
