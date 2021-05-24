@@ -10,7 +10,7 @@ import (
 
 const authPathFmtString = "auth/%s/login"
 
-//Config represents an application configurations
+// Config represents an application configuration
 type Config struct {
 	VaultAddress      string
 	TokenPath         string

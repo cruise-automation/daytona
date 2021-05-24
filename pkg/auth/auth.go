@@ -29,13 +29,13 @@ import (
 )
 
 // Authenticator is an interface to represent an external
-// source that should be authenticated against
+// source that should be authenticated against.
 type Authenticator interface {
 	// Auth is used to authenticate to an external service
 	Auth(*api.Client, cfg.Config) (string, error)
 }
 
-// authenticate authenticates!
+// authenticate authenticates with Vault, returns true if successful
 func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool {
 	var vaultToken string
 	var err error
@@ -56,6 +56,7 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 		log.Error().Err(err).Str("tokenPath", config.TokenPath).Msg("could not write token")
 		return false
 	}
+
 	client.SetToken(vaultToken)
 	return true
 }
@@ -73,23 +74,27 @@ func fetchVaultToken(client *api.Client, config cfg.Config, loginData map[string
 }
 
 // EnsureAuthenticated verifies we have a valid token, or attempts to fetch a new one.
-// Returns false if it is unable to become authenticated
+// Returns false if it is unable to become authenticated.
 func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 	// Vault Go API will read a token from VAULT_TOKEN if it exists.
 	// If it didn't find one, attempt to read token from disk.
 	log.Info().Msg("Checking for an existing, valid vault token")
+
 	if checkToken(client) {
 		return true
 	}
 
 	log.Info().Msg("No token found in VAULT_TOKEN env, checking path")
+
 	if checkFileToken(client, config.TokenPath) {
 		return true
 	}
 
 	log.Info().Str("tokenPath", config.TokenPath).Msg("No token found, trying to re-authenticate")
+
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 15
+
 	if config.InfiniteAuth {
 		log.Info().Msg("Infinite authentication enabled.")
 		bo.MaxElapsedTime = 0
@@ -112,12 +117,14 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 
 	authTicker := backoff.NewTicker(bo)
 	for range authTicker.C {
-		log.Info().Msg("Attempting to authenticate")
+		log.Info().Msg("Attempting to authenticate.")
+
 		if authenticate(client, config, svc) {
 			log.Info().Msg("Authentication succeeded.")
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -128,11 +135,12 @@ func checkToken(client *api.Client) bool {
 		return false
 	}
 
-	// Check the validity of the token.  If from disk, it could be expired.
+	// Check the validity of the token. If from disk, it could be expired.
 	_, err := client.Auth().Token().LookupSelf()
 	if err != nil {
-		log.Warn().Err(err).Msg("Invalid token")
+		log.Warn().Err(err).Msg("Invalid token. Deleting invalid token.")
 		client.ClearToken()
+
 		return false
 	}
 
@@ -144,10 +152,11 @@ func checkToken(client *api.Client) bool {
 func checkFileToken(client *api.Client, tokenPath string) bool {
 	fileToken, err := ioutil.ReadFile(tokenPath)
 	if err != nil {
-		log.Info().Str("tokenPath", tokenPath).Msg("Can't read an existing token")
+		log.Info().Str("tokenPath", tokenPath).Msg("Error reading existing token")
 		return false
 	}
-	log.Info().Str("tokenPath", tokenPath).Msg("Found an existing token")
+
+	log.Info().Str("tokenPath", tokenPath).Msg("Found an existing token, setting as client token")
 	client.SetToken(string(fileToken))
 
 	return checkToken(client)
@@ -158,26 +167,30 @@ func RenewService(client *api.Client, config cfg.Config) {
 	interval := time.Second * time.Duration(config.RenewalInterval)
 	log.Info().Dur("interval", interval).Msg("Starting the token renewer service")
 	ticker := time.Tick(interval)
+
 	for {
 		result, err := client.Auth().Token().LookupSelf()
 		if err != nil {
-			log.Fatal().Err(err).Msg("The existing token failed renewal")
+			log.Fatal().Err(err).Msg("The existing token failed renewal. Exiting.")
 		}
+
 		ttl, err := result.TokenTTL()
 		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to parse the token's ttl from JSON")
+			log.Fatal().Err(err).Msg("Failed to parse the token's TTL from JSON. Exiting.")
 		}
 
 		if ttl.Seconds() < float64(config.RenewalThreshold) {
 			fmt.Println("token ttl of", ttl.Seconds(), "is below threshold of", config.RenewalThreshold, ", renewing to", config.RenewalIncrement)
 			secret, err := client.Auth().Token().RenewSelf(int(config.RenewalIncrement))
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to renew the existing token")
+				log.Fatal().Err(err).Msg("Failed to renew the existing token. Exiting.")
 			}
+
 			client.SetToken(secret.Auth.ClientToken)
+
 			err = ioutil.WriteFile(config.TokenPath, []byte(secret.Auth.ClientToken), 0600)
 			if err != nil {
-				log.Fatal().Str("tokenPath", config.TokenPath).Err(err).Msg("Could not write token to file")
+				log.Fatal().Str("tokenPath", config.TokenPath).Err(err).Msg("Could not write token to file. Exiting.")
 			}
 		} else {
 			log.Info().Dur("tokenTTL", ttl).Int64("renewalThreshold", config.RenewalThreshold).Msg("Existing token ttl is still above the threshold, skipping renewal")
