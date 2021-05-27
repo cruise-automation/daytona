@@ -94,7 +94,7 @@ func TestInvalidAuthMethod(t *testing.T) {
 	}
 	client.SetToken(testToken)
 	config.MaximumAuthRetry = 1
-	assert.False(t, EnsureAuthenticated(client, config) , "The code did not return false when it should have")
+	assert.False(t, EnsureAuthenticated(client, config), "The code did not return false when it should have")
 }
 
 type MockedService struct {

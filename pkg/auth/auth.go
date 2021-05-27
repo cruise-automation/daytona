@@ -121,11 +121,11 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 		bo.MaxElapsedTime = time.Second * time.Duration(config.MaximumAuthRetry)
 	}
 
-	svc, ok := Authenticators[config.AuthMethod] 
+	svc, ok := Authenticators[config.AuthMethod]
 	if !ok {
 		log.Error().Strs("authMethods", Authenticators.Available()).Msg("You must provide a valid auth method")
 		return false
-	} 
+	}
 
 	authTicker := backoff.NewTicker(bo)
 	for range authTicker.C {

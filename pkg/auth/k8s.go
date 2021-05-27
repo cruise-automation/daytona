@@ -28,7 +28,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-
 // K8SService is an external service that vault can authenticate requests against
 type K8SService struct{}
 
