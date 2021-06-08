@@ -35,6 +35,24 @@ type Authenticator interface {
 	Auth(*api.Client, cfg.Config) (string, error)
 }
 
+var Authenticators RegisteredAuthenticators = map[cfg.AuthMethod]Authenticator{
+	cfg.AuthMethodK8s: &K8SService{},
+	cfg.AuthMethodAWS: &AWSService{},
+	cfg.AuthMethodGCP: &GCPService{},
+}
+
+type RegisteredAuthenticators map[cfg.AuthMethod]Authenticator
+
+func (ra RegisteredAuthenticators) Available() []string {
+	available := make([]string, 0, len(ra))
+
+	for authenticator := range ra {
+		available = append(available, string(authenticator))
+	}
+
+	return available
+}
+
 // authenticate authenticates with Vault, returns true if successful
 func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool {
 	var vaultToken string
@@ -62,7 +80,7 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 }
 
 func fetchVaultToken(client *api.Client, config cfg.Config, loginData map[string]interface{}) (string, error) {
-	secret, err := client.Logical().Write(config.AuthMount, loginData)
+	secret, err := client.Logical().Write(config.AuthPath, loginData)
 	if err != nil {
 		return "", err
 	}
@@ -103,16 +121,10 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 		bo.MaxElapsedTime = time.Second * time.Duration(config.MaximumAuthRetry)
 	}
 
-	var svc Authenticator
-	switch {
-	case config.K8SAuth:
-		svc = &K8SService{}
-	case config.AWSAuth:
-		svc = &AWSService{}
-	case config.GCPAuth:
-		svc = &GCPService{}
-	default:
-		panic("should never get here")
+	svc, ok := Authenticators[config.AuthMethod]
+	if !ok {
+		log.Error().Strs("authMethods", Authenticators.Available()).Msg("You must provide a valid auth method")
+		return false
 	}
 
 	authTicker := backoff.NewTicker(bo)

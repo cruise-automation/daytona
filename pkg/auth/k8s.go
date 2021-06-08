@@ -63,12 +63,12 @@ func InferK8SConfig(config *cfg.Config) {
 	}
 
 	// Check for default value
-	if config.K8SAuthMount == "kubernetes" {
+	if config.AuthMount == cfg.DefaultK8sAuthMount {
 		vaultAuthMount, err := inferVaultAuthMount()
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to infer K8S Vault Auth Mount")
 		} else {
-			config.K8SAuthMount = vaultAuthMount
+			config.AuthMount = vaultAuthMount
 		}
 	}
 }

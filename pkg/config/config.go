@@ -4,8 +4,34 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/cruise-automation/daytona/pkg/logging"
+)
+
+type AuthMethod string
+
+func (a *AuthMethod) String() string {
+	return string(*a)
+}
+
+func (a *AuthMethod) Set(value string) error {
+	upperAuthMethod := strings.ToUpper(value)
+	*a = AuthMethod(upperAuthMethod)
+	return nil
+}
+
+// Auth methods
+const (
+	AuthMethodK8s AuthMethod = "K8S"
+	AuthMethodAWS AuthMethod = "AWS"
+	AuthMethodGCP AuthMethod = "GCP"
+)
+
+const (
+	DefaultK8sAuthMount = "kubernetes"
+	DefaultAWSAuthMount = "aws"
+	DefaultGCPAuthMount = "gcp"
 )
 
 const authPathFmtString = "auth/%s/login"
@@ -14,13 +40,10 @@ const authPathFmtString = "auth/%s/login"
 type Config struct {
 	VaultAddress      string
 	TokenPath         string
+	AuthMethod        AuthMethod
+	AuthMount         string
+	AuthPath          string
 	K8STokenPath      string
-	K8SAuth           bool
-	K8SAuthMount      string
-	AWSAuth           bool
-	AWSAuthMount      string
-	GCPAuth           bool
-	GCPAuthMount      string
 	GCPServiceAccount string
 	VaultAuthRoleName string
 	RenewalThreshold  int64
@@ -33,7 +56,6 @@ type Config struct {
 	Entrypoint        bool
 	InfiniteAuth      bool
 	MaximumAuthRetry  int64
-	AuthMount         string
 	PkiIssuer         string
 	PkiRole           string
 	PkiDomains        string
@@ -55,15 +77,35 @@ func BuildDefaultConfigItem(envKey string, def string) (val string) {
 // ValidateAuthType validates that the user has supplied
 // a valid authentication type
 func (c *Config) ValidateAuthType() bool {
-	p := 0
-	for _, v := range []bool{c.K8SAuth, c.AWSAuth, c.GCPAuth} {
-		if v {
-			p++
-		}
+
+	if c.AuthMethod == "" {
+		val := os.Getenv("AUTH_METHOD")
+		c.AuthMethod.Set(val)
 	}
-	if p == 0 || p > 1 {
+
+	switch c.AuthMethod {
+	case AuthMethodK8s, AuthMethodAWS, AuthMethodGCP:
+		break
+	default:
 		return false
 	}
+
+	// Set the default value for the authType
+	if c.AuthMount == "" {
+		switch c.AuthMethod {
+		case AuthMethodK8s:
+			c.AuthMount = DefaultK8sAuthMount
+		case AuthMethodAWS:
+			c.AuthMount = DefaultAWSAuthMount
+		case AuthMethodGCP:
+			c.AuthMount = DefaultGCPAuthMount
+		}
+	}
+
+	if c.AuthPath == "" {
+		c.AuthPath = fmt.Sprintf(authPathFmtString, c.AuthMount)
+	}
+
 	return true
 }
 
@@ -82,12 +124,4 @@ func (c *Config) ValidateConfig() error {
 		return errors.New("one or more required PKI signing values are missing. PKI_ISSUER: " + c.PkiIssuer + ", PKI_ROLE: " + c.PkiRole + ", PKI_DOMAINS: " + c.PkiDomains + ", PKI_PRIVKEY: " + c.PkiPrivateKey + ", PKI_CERT: " + c.PkiCertificate)
 	}
 	return nil
-}
-
-// BuildAuthMountPath attempts to construct a mount path
-// if the provided one is empty
-func (c *Config) BuildAuthMountPath(path string) {
-	if c.AuthMount == "" {
-		c.AuthMount = fmt.Sprintf(authPathFmtString, path)
-	}
 }

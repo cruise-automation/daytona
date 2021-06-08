@@ -41,34 +41,15 @@ var config cfg.Config
 // this is populated at build time
 var version string
 
-const (
-	flagAWSIAMAuth = "aws-auth"
-	flagK8SAuth    = "k8s-auth"
-	flagGCPAuth    = "gcp-auth"
-)
-
 func init() {
+	flag.Var(&config.AuthMethod, "auth-method", "Select between AWS, GCP, or K8S as the vault authentication mechanism (env: AUTH_METHOD)")
+	flag.StringVar(&config.AuthMount, "auth-mount", cfg.BuildDefaultConfigItem("AUTH_MOUNT", ""), "The vault mount where auth takes place (env: AUTH_MOUNT)")
+	flag.StringVar(&config.AuthPath, "auth-path", cfg.BuildDefaultConfigItem("AUTH_PATH", ""), "The complete path for auth. If not provied one will be constructed from -auth-mount")
 	flag.StringVar(&config.VaultAddress, "address", "", "Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied")
-	flag.StringVar(&config.TokenPath, "token-path", cfg.BuildDefaultConfigItem("TOKEN_PATH", "~/.vault-token"), "A full file path where a token will be read from/written to (env: TOKEN_PATH)")
-	flag.BoolVar(&config.K8SAuth, flagK8SAuth, func() bool {
-		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("K8S_AUTH", "false"))
-		return err == nil && b
-	}(), "Select kubernetes vault auth as the vault authentication mechanism (env: K8S_AUTH)")
-	flag.BoolVar(&config.AWSAuth, flagAWSIAMAuth, func() bool {
-		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("IAM_AUTH", "false"))
-		return err == nil && b
-	}(), "Select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)")
-	flag.BoolVar(&config.AWSAuth, "iam-auth", func() bool {
-		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("IAM_AUTH", "false"))
-		return err == nil && b
-	}(), "(Legacy) Select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)")
-	flag.StringVar(&config.K8STokenPath, "k8s-token-path", cfg.BuildDefaultConfigItem("K8S_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"), "Kubernetes service account JWT token path (env: K8S_TOKEN_PATH)")
-	flag.StringVar(&config.VaultAuthRoleName, "vault-auth-role", cfg.BuildDefaultConfigItem("VAULT_AUTH_ROLE", ""), "The name of the role used for auth. Used with either auth method (env: VAULT_AUTH_ROLE, note: will infer to k8s SA account name if left blank)")
-	flag.BoolVar(&config.GCPAuth, flagGCPAuth, func() bool {
-		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("GCP_AUTH", "false"))
-		return err == nil && b
-	}(), "Select Google Cloud Platform IAM auth as the vault authentication mechanism (env: GCP_AUTH)")
-	flag.StringVar(&config.GCPServiceAccount, "gcp-svc-acct", cfg.BuildDefaultConfigItem("GCP_SVC_ACCT", ""), "The name of the service account authenticating (env: GCP_SVC_ACCT)")
+	flag.StringVar(&config.TokenPath, "token-path", cfg.BuildDefaultConfigItem("TOKEN_PATH", "~/.vault-token"), "a full file path where a token will be read from/written to (env: TOKEN_PATH)")
+	flag.StringVar(&config.K8STokenPath, "k8s-token-path", cfg.BuildDefaultConfigItem("K8S_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"), "kubernetes service account jtw token path (env: K8S_TOKEN_PATH)")
+	flag.StringVar(&config.VaultAuthRoleName, "vault-auth-role", cfg.BuildDefaultConfigItem("VAULT_AUTH_ROLE", ""), "the name of the role used for auth. used with either auth method (env: VAULT_AUTH_ROLE, note: will infer to k8s sa account name if left blank)")
+	flag.StringVar(&config.GCPServiceAccount, "gcp-svc-acct", cfg.BuildDefaultConfigItem("GCP_SVC_ACCT", ""), "the name of the service account authenticating (env: GCP_SVC_ACCT)")
 	flag.Int64Var(&config.RenewalInterval, "renewal-interval", func() int64 {
 		b, err := strconv.ParseInt(cfg.BuildDefaultConfigItem("RENEWAL_INTERVAL", "300"), 10, 64)
 		if err != nil {
@@ -113,11 +94,7 @@ func init() {
 			return 300
 		}
 		return b
-	}(), "The value, in seconds, for which DAYTONA should attempt to renew a token before exiting (env: MAX_AUTH_DURATION)")
-	flag.StringVar(&config.K8SAuthMount, "k8s-auth-mount", cfg.BuildDefaultConfigItem("K8S_AUTH_MOUNT", "kubernetes"), "The vault mount where k8s auth takes place (env: K8S_AUTH_MOUNT, note: will infer via k8s metadata api if left unset)")
-	flag.StringVar(&config.AWSAuthMount, "iam-auth-mount", cfg.BuildDefaultConfigItem("IAM_AUTH_MOUNT", "aws"), "The vault mount where iam auth takes place (env: IAM_AUTH_MOUNT)")
-	flag.StringVar(&config.GCPAuthMount, "gcp-auth-mount", cfg.BuildDefaultConfigItem("GCP_AUTH_MOUNT", "gcp"), "The vault mount where gcp auth takes place (env: GCP_AUTH_MOUNT)")
-	flag.StringVar(&config.AuthMount, "auth-mount", cfg.BuildDefaultConfigItem("AUTH_MOUNT", ""), "")
+	}(), "the value, in seconds, for which DAYTONA should attempt to renew a token before exiting (env: MAX_AUTH_DURATION)")
 	flag.IntVar(&config.Workers, "workers", func() int {
 		b, err := strconv.ParseInt(cfg.BuildDefaultConfigItem("WORKERS", "1"), 10, 64)
 		if err != nil {
@@ -152,24 +129,8 @@ func main() {
 	log.Info().Str("version", version).Msg("Starting...")
 
 	if !config.ValidateAuthType() {
-		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth}).Msg("You must provide an auth method. Exiting.")
+		log.Fatal().Strs("authMethods", auth.Authenticators.Available()).Msg("You must provide an auth method")
 	}
-
-	var mountPath string
-	switch {
-	case config.K8SAuth:
-		auth.InferK8SConfig(&config)
-		mountPath = config.K8SAuthMount
-	case config.AWSAuth:
-		mountPath = config.AWSAuthMount
-	case config.GCPAuth:
-		mountPath = config.GCPAuthMount
-	}
-
-	// =========================================================================
-	// Authentication with Vault
-	// =========================================================================
-	config.BuildAuthMountPath(mountPath)
 
 	if err := config.ValidateConfig(); err != nil {
 		log.Fatal().Err(err).Msg("Invalid configuration. Exiting.")

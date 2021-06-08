@@ -86,7 +86,7 @@ const (
 `
 )
 
-func TestAuthPanic(t *testing.T) {
+func TestInvalidAuthMethod(t *testing.T) {
 	var config cfg.Config
 	client, err := testhelpers.GetTestClient("nan")
 	if err != nil {
@@ -94,7 +94,7 @@ func TestAuthPanic(t *testing.T) {
 	}
 	client.SetToken(testToken)
 	config.MaximumAuthRetry = 1
-	assert.Panics(t, func() { EnsureAuthenticated(client, config) }, "The code did not panic when it should have")
+	assert.False(t, EnsureAuthenticated(client, config), "The code did not return false when it should have")
 }
 
 type MockedService struct {

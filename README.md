@@ -278,9 +278,9 @@ spec:
       - name: vault-secrets
         mountPath: /home/vault
       env:
-      - name: K8S_AUTH
-        value: "true"
-      - name : K8S_AUTH_MOUNT
+      - name: AUTH_METHOD
+        value: "k8S"
+      - name : AUTH_MOUNT
         value: "kubernetes-gcp-dev-cluster"
       - name: SECRET_ENV
         value: "true"
@@ -351,8 +351,8 @@ Assume you have the following Vault AWS Auth Role, `vault-role-name`:
 }
 ```
 
-```
-VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -iam-auth -token-path /home/vault/.vault-token -vault-auth-role vault-role-name
+```sh
+VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -auth-method=AWS -token-path /home/vault/.vault-token -vault-auth-role vault-role-name
 ```
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
@@ -380,7 +380,7 @@ as a representation of the following vault data:
 In a `Dockerfile`:
 
 ```dockerfile
-ENTRYPOINT [ "./daytona", "-secret-env", "-iam-auth", "-vault-auth-role", "vault-role-name", "-entrypoint", "--" ]
+ENTRYPOINT [ "./daytona", "-secret-env", "-auth-method", "AWS", "-vault-auth-role", "vault-role-name", "-entrypoint", "--" ]
 ```
 
 combined with supplying the following during a `docker run`:
@@ -417,7 +417,7 @@ as a representation of the following vault data:
 In a `Dockerfile`:
 
 ```dockerfile
-ENTRYPOINT [ "./daytona", "-iam-auth", "-vault-auth-role", "vault-role-name", "-pki-issuer", "pki-backend", "-pki-role", "my-role", "-pki-domains", "www.example.com", "-pki-cert", "/etc/cert.pem", "-pki-privkey", "/etc/key.pem", "-pki-use-ca-chain", -entrypoint", "--" ]
+ENTRYPOINT [ "./daytona", "-auth-method", "AWS", "-vault-auth-role", "vault-role-name", "-pki-issuer", "pki-backend", "-pki-role", "my-role", "-pki-domains", "www.example.com", "-pki-cert", "/etc/cert.pem", "-pki-privkey", "/etc/key.pem", "-pki-use-ca-chain", -entrypoint", "--" ]
 ```
 
 Given a PKI backend issuer role located at `pki-backend/issue/my-role`, and `update` permissions granted to `vault-role-name` on this path, Daytona will request a certificate for `www.example.com` from Vault, placing the certificate (with CA chain) and private key in `/etc`.
@@ -448,8 +448,8 @@ Assume you have the following Vault GCP Auth Role:
 }
 ```
 
-```
-VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -gcp-auth -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name
+```sh
+VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -auth-method=GCP -gcp-svc-acct cruise-automation-sa@my-project.iam.gserviceaccount.com -token-path /home/vault/.vault-token -vault-auth-role vault-gcp-role-name
 ```
 
 The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
@@ -502,29 +502,18 @@ Usage
 Usage of ./daytona:
   -address string
       Sets the vault server address. The default vault address or VAULT_ADDR environment variable is used if this is not supplied
-  -auth-mount string
   -auto-renew
       if enabled, starts the token renewal service (env: AUTO_RENEW)
-  -aws-auth
-      select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)
+  -auth-method
+      select between AWS, GCP, or K8S as the vault authentication mechanism (env: AUTH_METHOD)
   -entrypoint
       if enabled, execs the command after the separator (--) when done. mostly useful with -secret-env (env: ENTRYPOINT)
-  -gcp-auth
-      select Google Cloud Platform IAM auth as the vault authentication mechanism (env: GCP_AUTH)
-  -gcp-auth-mount string
-      the vault mount where gcp auth takes place (env: GCP_AUTH_MOUNT) (default "gcp")
+  -auth-mount string
+      the vault mount where auth takes place (env: AUTH_MOUNT)
   -gcp-svc-acct string
       the name of the service account authenticating (env: GCP_SVC_ACCT)
-  -iam-auth
-      (legacy) select AWS IAM vault auth as the vault authentication mechanism (env: IAM_AUTH)
-  -iam-auth-mount string
-      the vault mount where iam auth takes place (env: IAM_AUTH_MOUNT) (default "aws")
   -infinite-auth
       infinitely attempt to authenticate (env: INFINITE_AUTH)
-  -k8s-auth
-      select kubernetes vault auth as the vault authentication mechanism (env: K8S_AUTH)
-  -k8s-auth-mount string
-      the vault mount where k8s auth takes place (env: K8S_AUTH_MOUNT, note: will infer via k8s metadata api if left unset) (default "kubernetes")
   -k8s-token-path string
       kubernetes service account JWT token path (env: K8S_TOKEN_PATH) (default "/var/run/secrets/kubernetes.io/serviceaccount/token")
   -log-level string
