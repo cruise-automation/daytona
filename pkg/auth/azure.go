@@ -17,7 +17,6 @@ package auth
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
@@ -27,15 +26,34 @@ import (
 // AzureService is an external service that vault can authenticate request against
 type AzureService struct{}
 
-func (a *AzureService) Auth(client *api.Client, config cfg.Config) (string, error) {
-}
-
 type azureVaultPayload struct {
 	Role              string
 	SubscriptionID    string
 	VmName            string
 	ResourceGroupName string
 	JWT               string
+}
+
+func (a *AzureService) Auth(client *api.Client, config cfg.Config) (string, error) {
+	metadata, err := a.getMetadata()
+	if err != nil {
+		return "", err
+	}
+
+	jwt, err := a.getJWT()
+	if err != nil {
+		return "", err
+	}
+
+	loginData := map[string]interface{}{
+		"role":                config.VaultAuthRoleName,
+		"subscription_id":     metadata.Compute.SubscriptionID,
+		"vm_name":             metadata.Compute.Name,
+		"resource_group_name": metadata.Compute.ResourceGroupName,
+		"jwt":                 jwt,
+	}
+
+	return fetchVaultToken(client, config, loginData)
 }
 
 type simplifiedMetadata struct {
@@ -51,10 +69,10 @@ type simplifiedToken struct {
 	AccessToken string `json:"access_token"`
 }
 
-func (a *AWSService) getJWT(baseURL string) (string, error) {
+func (a *AzureService) getJWT() (string, error) {
 	// TODO: build the request in parts
 	// response=$(curl 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F' -H Metadata:true -s)
-	jwtEndpoint := fmt.Sprintf("%s/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/", baseURL)
+	jwtEndpoint := "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/"
 	r, err := http.NewRequest(http.MethodGet, jwtEndpoint, nil)
 	if err != nil {
 		return "", err
@@ -74,12 +92,12 @@ func (a *AWSService) getJWT(baseURL string) (string, error) {
 
 }
 
-func (a *AWSService) getMetadata(baseURL string) (*simplifiedMetadata, error) {
+func (a *AzureService) getMetadata() (*simplifiedMetadata, error) {
 	// TODO: build the request in parts
 	// Get metadata
 	// Metadata is not exposed through the Azure-sdk-for-go https://github.com/Azure/azure-sdk-for-go/issues/982
 	// metadata=$(curl -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01")
-	metadataEndpoint := fmt.Sprintf("%s/metadata/instance?api-version=2017-08-01", baseURL)
+	metadataEndpoint := "http://169.254.169.254/metadata/instance?api-version=2017-08-01"
 	r, err := http.NewRequest(http.MethodGet, metadataEndpoint, nil)
 	if err != nil {
 		return nil, err
