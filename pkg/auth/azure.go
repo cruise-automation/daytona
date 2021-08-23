@@ -56,29 +56,25 @@ func (a *AzureService) Auth(client *api.Client, config cfg.Config) (string, erro
 	return fetchVaultToken(client, config, loginData)
 }
 
-type simplifiedMetadata struct {
-	Compute simplifiedCompute `json:"compute"`
-}
-type simplifiedCompute struct {
-	Name              string `json:"name"`
-	ResourceGroupName string `json:"resourceGroupName"`
-	SubscriptionID    string `json:"subscriptionId"`
-}
-
 type simplifiedToken struct {
 	AccessToken string `json:"access_token"`
 }
 
 func (a *AzureService) getJWT() (string, error) {
-	// TODO: build the request in parts
-	// response=$(curl 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F' -H Metadata:true -s)
-	jwtEndpoint := "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/"
-	r, err := http.NewRequest(http.MethodGet, jwtEndpoint, nil)
+	r, err := http.NewRequest(http.MethodGet, "http://169.254.169.254/metadata/identity/oauth2/token", nil)
 	if err != nil {
 		return "", err
 	}
 
 	r.Header.Add("Metadata", "true")
+
+	q := r.URL.Query()
+	q.Add("format", "json")
+	// TODO: look at updating the api-version
+	q.Add("api-version", "2018-02-01")
+	q.Add("resource", "https://management.azure.com/")
+
+	r.URL.RawQuery = q.Encode()
 
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
@@ -92,18 +88,29 @@ func (a *AzureService) getJWT() (string, error) {
 
 }
 
+type simplifiedMetadata struct {
+	Compute simplifiedCompute `json:"compute"`
+}
+type simplifiedCompute struct {
+	Name              string `json:"name"`
+	ResourceGroupName string `json:"resourceGroupName"`
+	SubscriptionID    string `json:"subscriptionId"`
+}
+
 func (a *AzureService) getMetadata() (*simplifiedMetadata, error) {
-	// TODO: build the request in parts
-	// Get metadata
-	// Metadata is not exposed through the Azure-sdk-for-go https://github.com/Azure/azure-sdk-for-go/issues/982
-	// metadata=$(curl -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01")
-	metadataEndpoint := "http://169.254.169.254/metadata/instance?api-version=2017-08-01"
-	r, err := http.NewRequest(http.MethodGet, metadataEndpoint, nil)
+	r, err := http.NewRequest(http.MethodGet, "http://169.254.169.254/metadata/instance", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	r.Header.Add("Metadata", "true")
+
+	q := r.URL.Query()
+	q.Add("format", "json")
+	// TODO: look at updating the api-version
+	q.Add("api-version", "2017-08-01")
+
+	r.URL.RawQuery = q.Encode()
 
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
