@@ -112,7 +112,7 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 	case config.GCPAuth:
 		svc = &GCPService{}
 	case config.AzureAuth:
-		svc = &AWSService{}
+		svc = &AzureService{}
 	default:
 		panic("should never get here")
 	}

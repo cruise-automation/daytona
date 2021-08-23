@@ -58,7 +58,7 @@ func BuildDefaultConfigItem(envKey string, def string) (val string) {
 // a valid authentication type
 func (c *Config) ValidateAuthType() bool {
 	p := 0
-	for _, v := range []bool{c.K8SAuth, c.AWSAuth, c.GCPAuth, c.AWSAuth} {
+	for _, v := range []bool{c.K8SAuth, c.AWSAuth, c.GCPAuth, c.AzureAuth} {
 		if v {
 			p++
 		}

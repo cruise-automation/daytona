@@ -478,7 +478,7 @@ as a representation of the following vault data:
 
 **Azure IAM Example - Writing to a File**:
 
-Assume you have the following Vault Azure Auth Role, `vault-role-name`:
+Assume you have the following [Vault Azure Auth Role](https://www.vaultproject.io/api/auth/azure#create-role), `vault-role-name`:
 
 ```json
 {
