@@ -17,6 +17,7 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	cfg "github.com/cruise-automation/daytona/pkg/config"
@@ -70,15 +71,18 @@ func (a *AzureService) getJWT() (string, error) {
 
 	q := r.URL.Query()
 	q.Add("format", "json")
-	// TODO: look at updating the api-version
 	q.Add("api-version", "2018-02-01")
 	q.Add("resource", "https://management.azure.com/")
-
 	r.URL.RawQuery = q.Encode()
 
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
 		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code while getting JWT %d", resp.StatusCode)
 	}
 
 	token := new(simplifiedToken)
@@ -107,14 +111,17 @@ func (a *AzureService) getMetadata() (*simplifiedMetadata, error) {
 
 	q := r.URL.Query()
 	q.Add("format", "json")
-	// TODO: look at updating the api-version
 	q.Add("api-version", "2017-08-01")
-
 	r.URL.RawQuery = q.Encode()
 
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
 		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code while getting Metadata %d", resp.StatusCode)
 	}
 
 	metadata := new(simplifiedMetadata)
