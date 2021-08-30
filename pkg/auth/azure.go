@@ -70,7 +70,6 @@ func (a *AzureService) getJWT() (string, error) {
 	r.Header.Add("Metadata", "true")
 
 	q := r.URL.Query()
-	q.Add("format", "json")
 	q.Add("api-version", "2018-02-01")
 	q.Add("resource", "https://management.azure.com/")
 	r.URL.RawQuery = q.Encode()
@@ -82,7 +81,7 @@ func (a *AzureService) getJWT() (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code while getting JWT %d", resp.StatusCode)
+		return "", fmt.Errorf("unexpected status code while getting JWT: %d", resp.StatusCode)
 	}
 
 	token := new(simplifiedToken)
