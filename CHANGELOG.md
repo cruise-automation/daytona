@@ -1,3 +1,7 @@
+## 1.2.0 - August 31, 2021
+
+- Add Azure Auth method (#78)
+
 ## 1.1.6 - May 10, 2021
 
 - Address a defect with the parsing & handling of alt_names (#76)
