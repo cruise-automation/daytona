@@ -35,6 +35,8 @@ The following authentication methods are supported:
 
  - **GCP IAM** - To be used with the [Vault GCP Auth Backend](https://www.vaultproject.io/docs/auth/gcp.html). Uses GCP service accounts for IAM Vault authentication. Intended for use with GCP resources that utilize bound service accounts.
 
+ - **Azure IAM** - To be used with the [Vault Azure Auth Backend](https://www.vaultproject.io/docs/auth/azure.html). Uses Azure Active Directory credentials for IAM Vault authentication. Intended for use with Azure resources that utilize manged identities.
+
 ----
 
 ## Secret Fetching
@@ -473,6 +475,45 @@ as a representation of the following vault data:
 ```
 
 **Security Consideration** - When using the GCP IAM Auth type, ensure that the capability for the GCP SA to use the `signjwt` permission is limited only to the service accounts you wish to authenticate with to Vault. Providing your GCP SA the `signjwt` permission, such as through `iam.serviceAccountTokenCreator`, when done at the project level will over-authorize your service account to be able to sign JWTs of any other service account in the project, thus impersonating them. It is best practice to bind these permissions against the service account itself, and not at the project level. For more information, see the [GCP Documentation](https://cloud.google.com/iam/docs/granting-roles-to-service-accounts#granting_access_to_a_service_account_for_a_resource) on how to grant permissions against a specific service account.
+
+**Azure IAM Example - Writing to a File**:
+
+Assume you have the following [Vault Azure Auth Role](https://www.vaultproject.io/api/auth/azure#create-role), `vault-role-name`:
+
+```json
+{
+  "bound_subscription_ids": [
+     "00000000-0000-0000-0000-000000000000"
+  ],
+  "token_policies": [
+    "my-ro-policy"
+  ]
+}
+```
+
+```
+VAULT_SECRETS_TEST=secret/path/to/app/secrets DAYTONA_SECRET_DESTINATION_TEST=/home/vault/secrets daytona -azure-auth -token-path /home/vault/.vault-token -vault-auth-role vault-role-name
+```
+
+The execution example above (assuming a successful authentication) would yield a vault token at `/home/vault/.vault-token` and any specified secrets written to `/home/vault/secrets` as
+
+```json
+{
+  "secrets_secretA": "hellooo",
+  "secrets_api_key": "supersecret"
+}
+```
+
+as a representation of the following vault data:
+
+`secret/path/to/app/secrets`
+
+```
+{
+  "secretA": "hellooo",
+  "api_key": "supersecret"
+}
+```
 
 Development
 -----------

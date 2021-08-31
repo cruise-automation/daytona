@@ -45,6 +45,7 @@ const (
 	flagAWSIAMAuth = "aws-auth"
 	flagK8SAuth    = "k8s-auth"
 	flagGCPAuth    = "gcp-auth"
+	flagAzureAuth  = "azure-auth"
 )
 
 func init() {
@@ -144,6 +145,12 @@ func init() {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("LOG_STRUCTURED", "true"))
 		return err == nil && b
 	}(), "If set, log output will be JSON else writes human-friendly format (env: LOG_STRUCTURED)")
+
+	flag.StringVar(&config.AzureAuthMount, "azure-auth-mount", cfg.BuildDefaultConfigItem("AZURE_AUTH_MOUNT", "azure"), "the vault mount where azure auth takes place (env: AZURE_AUTH_MOUNT)")
+	flag.BoolVar(&config.AzureAuth, flagAzureAuth, func() bool {
+		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("AZURE_AUTH", "false"))
+		return err == nil && b
+	}(), "select Azure IAM auth as the vault authentication mechanism (env: AZURE_AUTH)")
 }
 
 func main() {
@@ -164,6 +171,8 @@ func main() {
 		mountPath = config.AWSAuthMount
 	case config.GCPAuth:
 		mountPath = config.GCPAuthMount
+	case config.AzureAuth:
+		mountPath = config.AzureAuthMount
 	}
 
 	// =========================================================================
