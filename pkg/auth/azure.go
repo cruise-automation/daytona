@@ -62,33 +62,15 @@ type simplifiedToken struct {
 }
 
 func (a *AzureService) getJWT() (string, error) {
-	r, err := http.NewRequest(http.MethodGet, "http://169.254.169.254/metadata/identity/oauth2/token", nil)
-	if err != nil {
-		return "", err
-	}
-
-	r.Header.Add("Metadata", "true")
-
-	q := r.URL.Query()
-	q.Add("api-version", "2018-02-01")
-	q.Add("resource", "https://management.azure.com/")
-	r.URL.RawQuery = q.Encode()
-
-	resp, err := http.DefaultClient.Do(r)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code while getting JWT: %d", resp.StatusCode)
-	}
+	url := "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/"
 
 	token := new(simplifiedToken)
-	err = json.NewDecoder(resp.Body).Decode(token)
 
-	return token.AccessToken, err
+	if err := queryAzureMetadata(url, token); err != nil {
+		return "", fmt.Errorf("error getting jwt: %w", err)
+	}
 
+	return token.AccessToken, nil
 }
 
 type simplifiedMetadata struct {
@@ -101,30 +83,36 @@ type simplifiedCompute struct {
 }
 
 func (a *AzureService) getMetadata() (*simplifiedMetadata, error) {
-	r, err := http.NewRequest(http.MethodGet, "http://169.254.169.254/metadata/instance", nil)
+	url := "http://169.254.169.254/metadata/instance?format=json&api-version=2017-08-01"
+
+	metadata := new(simplifiedMetadata)
+
+	if err := queryAzureMetadata(url, metadata); err != nil {
+		return nil, fmt.Errorf("error getting metadata: %w", err)
+	}
+
+	return metadata, nil
+}
+
+func queryAzureMetadata(url string, obj interface{}) error {
+	r, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	r.Header.Add("Metadata", "true")
 
-	q := r.URL.Query()
-	q.Add("format", "json")
-	q.Add("api-version", "2017-08-01")
-	r.URL.RawQuery = q.Encode()
-
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code while getting Metadata %d", resp.StatusCode)
+		return fmt.Errorf("unexpected status code while querying Azure %d", resp.StatusCode)
 	}
 
-	metadata := new(simplifiedMetadata)
-	err = json.NewDecoder(resp.Body).Decode(metadata)
+	err = json.NewDecoder(resp.Body).Decode(obj)
 
-	return metadata, err
+	return err
 }
