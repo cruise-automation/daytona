@@ -36,9 +36,10 @@ type Authenticator interface {
 }
 
 var Authenticators RegisteredAuthenticators = map[cfg.AuthMethod]Authenticator{
-	cfg.AuthMethodK8s: &K8SService{},
-	cfg.AuthMethodAWS: &AWSService{},
-	cfg.AuthMethodGCP: &GCPService{},
+	cfg.AuthMethodK8s:   &K8SService{},
+	cfg.AuthMethodAWS:   &AWSService{},
+	cfg.AuthMethodGCP:   &GCPService{},
+	cfg.AuthMethodAzure: &AzureService{},
 }
 
 type RegisteredAuthenticators map[cfg.AuthMethod]Authenticator

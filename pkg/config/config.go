@@ -23,15 +23,17 @@ func (a *AuthMethod) Set(value string) error {
 
 // Auth methods
 const (
-	AuthMethodK8s AuthMethod = "K8S"
-	AuthMethodAWS AuthMethod = "AWS"
-	AuthMethodGCP AuthMethod = "GCP"
+	AuthMethodK8s   AuthMethod = "K8S"
+	AuthMethodAWS   AuthMethod = "AWS"
+	AuthMethodGCP   AuthMethod = "GCP"
+	AuthMethodAzure AuthMethod = "Azure"
 )
 
 const (
-	DefaultK8sAuthMount = "kubernetes"
-	DefaultAWSAuthMount = "aws"
-	DefaultGCPAuthMount = "gcp"
+	DefaultK8sAuthMount   = "kubernetes"
+	DefaultAWSAuthMount   = "aws"
+	DefaultGCPAuthMount   = "gcp"
+	DefaultAzureAuthMount = "azure"
 )
 
 const authPathFmtString = "auth/%s/login"
@@ -84,7 +86,7 @@ func (c *Config) ValidateAuthType() bool {
 	}
 
 	switch c.AuthMethod {
-	case AuthMethodK8s, AuthMethodAWS, AuthMethodGCP:
+	case AuthMethodK8s, AuthMethodAWS, AuthMethodGCP, AuthMethodAzure:
 		break
 	default:
 		return false
@@ -99,6 +101,8 @@ func (c *Config) ValidateAuthType() bool {
 			c.AuthMount = DefaultAWSAuthMount
 		case AuthMethodGCP:
 			c.AuthMount = DefaultGCPAuthMount
+		case AuthMethodAzure:
+			c.AuthMount = DefaultAzureAuthMount
 		}
 	}
 
