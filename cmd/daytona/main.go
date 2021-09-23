@@ -38,8 +38,13 @@ import (
 
 var config cfg.Config
 
-// this is populated at build time
-var version string
+var (
+	// this is populated at build time
+	version string
+
+	// HTTPUserAgent is the header used to identify this application.
+	httpUserAgent = "DAYTONA/" + version
+)
 
 const (
 	flagAWSIAMAuth = "aws-auth"
@@ -219,6 +224,8 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not configure vault client. Exiting.")
 	}
+
+	client.AddHeader("User-Agent", httpUserAgent)
 
 	if !auth.EnsureAuthenticated(client, config) {
 		log.Fatal().Msg("The maximum elapsed time has been reached for authentication attempts. Exiting.")

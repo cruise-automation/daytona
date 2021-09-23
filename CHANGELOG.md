@@ -1,3 +1,7 @@
+## 1.2.1 - September 22, 2021
+
+- Set DAYTONA/<version> as the User-Agent instead of the default Go http UA. (#80)
+
 ## 1.2.0 - August 31, 2021
 
 - Add Azure Auth method (#78)
