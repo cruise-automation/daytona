@@ -27,14 +27,6 @@ import (
 // AzureService is an external service that vault can authenticate request against
 type AzureService struct{}
 
-type azureVaultPayload struct {
-	Role              string
-	SubscriptionID    string
-	VmName            string
-	ResourceGroupName string
-	JWT               string
-}
-
 func (a *AzureService) Auth(client *api.Client, config cfg.Config) (string, error) {
 	metadata, err := a.getMetadata()
 	if err != nil {
@@ -46,10 +38,12 @@ func (a *AzureService) Auth(client *api.Client, config cfg.Config) (string, erro
 		return "", err
 	}
 
+	// https://www.vaultproject.io/api/auth/azure#login
 	loginData := map[string]interface{}{
 		"role":                config.VaultAuthRoleName,
 		"subscription_id":     metadata.Compute.SubscriptionID,
 		"vm_name":             metadata.Compute.Name,
+		"vmss_name":           metadata.Compute.VMScalesetName,
 		"resource_group_name": metadata.Compute.ResourceGroupName,
 		"jwt":                 jwt,
 	}
@@ -80,10 +74,11 @@ type simplifiedCompute struct {
 	Name              string `json:"name"`
 	ResourceGroupName string `json:"resourceGroupName"`
 	SubscriptionID    string `json:"subscriptionId"`
+	VMScalesetName    string `json:"vmScaleSetName"`
 }
 
 func (a *AzureService) getMetadata() (*simplifiedMetadata, error) {
-	url := "http://169.254.169.254/metadata/instance?format=json&api-version=2017-08-01"
+	url := "http://169.254.169.254/metadata/instance?format=json&api-version=2021-02-01"
 
 	metadata := new(simplifiedMetadata)
 
