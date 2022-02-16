@@ -16,6 +16,7 @@ echo $THING | app
 
 Instead, a single binary can be used to accomplish most of these goals.
 
+* [Installation](#installation)
 * [Authentication](#authentication)
 * [Secret Fetching](#secret-fetching)
 * [Implementation Examples](#implementation-examples)
@@ -24,6 +25,10 @@ Instead, a single binary can be used to accomplish most of these goals.
   + [Deployment](#deployment)
 * [License](#license)
 * [Contributions](#contributions)
+
+### Installation
+
+Run `go install github.com/cruise-automation/daytona/cmd/daytona@latest` to install in your go source path
 
 ### Authentication
 
