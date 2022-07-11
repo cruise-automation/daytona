@@ -8,27 +8,37 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/googleapi"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"os"
-	"path/filepath"
 )
 
 const (
-	defaultHomeCredentialsFile                = ".gcp/credentials"
+	defaultHomeCredentialsFile = ".gcp/credentials"
 
-	// Global URL: https://cloud.google.com/iam/docs/creating-managing-service-account-keys
-	serviceAccountPublicKeyUrlTemplate        = "https://www.googleapis.com/service_accounts/v1/metadata/x509/%s?alt=json"
+	// Default service endpoint for interaction with Google APIs
+	// https://cloud.google.com/apis/design/glossary#api_service_endpoint
+	defaultGoogleAPIsEndpoint = "https://www.googleapis.com"
 
-	// Global URL: Base URL from golang.org/x/oauth2, v1 returns x509 keys
-	googleOauthProviderX509CertUrl            = "https://www.googleapis.com/oauth2/v1/certs"
+	// serviceAccountPublicKeyURLPathTemplate is a templated URL path for obtaining the
+	// public keys associated with a service account. See details at
+	//   - https://cloud.google.com/iam/docs/creating-managing-service-account-keys
+	//   - https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/signJwt#response-body
+	serviceAccountPublicKeyURLPathTemplate = "/service_accounts/v1/metadata/x509/%s?alt=json"
+
+	// googleOAuthProviderX509CertURLPath is a URL path to Google's public OAuth keys.
+	// Using v1 returns the keys in X.509 certificate format.
+	googleOAuthProviderX509CertURLPath = "/oauth2/v1/certs"
 )
 
 // GcpCredentials represents a simplified version of the Google Cloud Platform credentials file format.
@@ -135,7 +145,7 @@ func PublicKey(pemString string) (interface{}, error) {
 
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
-		return nil, errors.New("Unable to find pem block in key")
+		return nil, errors.New("unable to find pem block in key")
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
@@ -146,23 +156,46 @@ func PublicKey(pemString string) (interface{}, error) {
 	return cert.PublicKey, nil
 }
 
+// ServiceAccountPublicKey returns the public key with the given key ID for
+// the given service account if it exists. If the key does not exist, an error
+// is returned.
 func ServiceAccountPublicKey(serviceAccount string, keyId string) (interface{}, error) {
-	keyUrl := fmt.Sprintf(serviceAccountPublicKeyUrlTemplate, url.PathEscape(serviceAccount))
-	res, err := cleanhttp.DefaultClient().Get(keyUrl)
+	return ServiceAccountPublicKeyWithEndpoint(context.Background(), serviceAccount, keyId, "")
+}
+
+// ServiceAccountPublicKeyWithEndpoint returns the public key with the given key
+// ID for the given service account if it exists. If endpoint is provided, it will
+// be used as the service endpoint for the request. If endpoint is not provided,
+// a default of "https://www.googleapis.com" will be used. If the key does not exist,
+// an error is returned.
+func ServiceAccountPublicKeyWithEndpoint(ctx context.Context, serviceAccount, keyID, endpoint string) (interface{}, error) {
+	if endpoint == "" {
+		endpoint = defaultGoogleAPIsEndpoint
+	}
+
+	keyURLPath := fmt.Sprintf(serviceAccountPublicKeyURLPathTemplate, url.PathEscape(serviceAccount))
+	keyURL := strings.TrimSuffix(endpoint, "/") + keyURLPath
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, keyURL, nil)
 	if err != nil {
 		return nil, err
 	}
-	if err := googleapi.CheckResponse(res); err != nil {
+	resp, err := cleanhttp.DefaultClient().Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if err := googleapi.CheckResponse(resp); err != nil {
 		return nil, err
 	}
 
 	jwks := map[string]interface{}{}
-	if err := json.NewDecoder(res.Body).Decode(&jwks); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
 		return nil, fmt.Errorf("unable to decode JSON response: %v", err)
 	}
-	kRaw, ok := jwks[keyId]
+	kRaw, ok := jwks[keyID]
 	if !ok {
-		return nil, fmt.Errorf("service account %q key %q not found at GET %q", keyId, serviceAccount, keyUrl)
+		return nil, fmt.Errorf("service account %q key %q not found at GET %q", keyID, serviceAccount, keyURL)
 	}
 
 	kStr, ok := kRaw.(string)
@@ -172,24 +205,44 @@ func ServiceAccountPublicKey(serviceAccount string, keyId string) (interface{}, 
 	return PublicKey(kStr)
 }
 
-// OAuth2RSAPublicKey returns the PEM key file string for Google Oauth2 public cert for the given 'kid' id.
-func OAuth2RSAPublicKey(ctx context.Context, keyId string) (interface{}, error) {
-	certUrl := googleOauthProviderX509CertUrl
-	res, err := cleanhttp.DefaultClient().Get(certUrl)
+// OAuth2RSAPublicKey returns the public key with the given key ID from Google's
+// public set of OAuth 2.0 keys. If the key does not exist, an error is returned.
+func OAuth2RSAPublicKey(ctx context.Context, keyID string) (interface{}, error) {
+	return OAuth2RSAPublicKeyWithEndpoint(ctx, keyID, "")
+}
+
+// OAuth2RSAPublicKeyWithEndpoint returns the public key with the given key ID from
+// Google's public set of OAuth 2.0 keys. If endpoint is provided, it will be used as
+// the service endpoint for the request. If endpoint is not provided, a default of
+// "https://www.googleapis.com" will be used. If the key does not exist, an error is
+// returned.
+func OAuth2RSAPublicKeyWithEndpoint(ctx context.Context, keyID, endpoint string) (interface{}, error) {
+	if endpoint == "" {
+		endpoint = defaultGoogleAPIsEndpoint
+	}
+
+	certUrl := strings.TrimSuffix(endpoint, "/") + googleOAuthProviderX509CertURLPath
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, certUrl, nil)
 	if err != nil {
 		return nil, err
 	}
-	if err := googleapi.CheckResponse(res); err != nil {
+	resp, err := cleanhttp.DefaultClient().Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if err := googleapi.CheckResponse(resp); err != nil {
 		return nil, err
 	}
 
 	jwks := map[string]interface{}{}
-	if err := json.NewDecoder(res.Body).Decode(&jwks); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
 		return nil, fmt.Errorf("unable to decode JSON response: %v", err)
 	}
-	kRaw, ok := jwks[keyId]
+	kRaw, ok := jwks[keyID]
 	if !ok {
-		return nil, fmt.Errorf("key %q not found (GET %q)", keyId, certUrl)
+		return nil, fmt.Errorf("key %q not found (GET %q)", keyID, certUrl)
 	}
 
 	kStr, ok := kRaw.(string)

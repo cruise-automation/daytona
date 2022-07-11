@@ -1,3 +1,7 @@
+## 1.2.3 - UNRELEASED
+
+- Update to go 1.18.3
+
 ## 1.2.2 - September 29, 2021
 
 - Enable VM Scaleset functionality for Azure Auth Method. (#81)

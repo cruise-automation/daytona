@@ -2,9 +2,10 @@ package gcputil
 
 import (
 	"fmt"
-	"google.golang.org/api/compute/v1"
 	"regexp"
 	"time"
+
+	"google.golang.org/api/compute/v1"
 )
 
 var gcpLabelRegex = regexp.MustCompile("^(?P<key>[a-z]([\\w-]+)?):(?P<value>[\\w-]*)$")
@@ -12,7 +13,6 @@ var gcpLabelRegex = regexp.MustCompile("^(?P<key>[a-z]([\\w-]+)?):(?P<value>[\\w
 func ParseGcpLabels(labels []string) (parsed map[string]string, invalid []string) {
 	parsed = map[string]string{}
 	invalid = []string{}
-
 
 	for _, labelStr := range labels {
 		matches := gcpLabelRegex.FindStringSubmatch(labelStr)
