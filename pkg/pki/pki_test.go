@@ -442,7 +442,7 @@ func testHandler() http.Handler {
 		func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "wrong-role") {
 				w.WriteHeader(400)
-				fmt.Fprintln(w, testPkiIssueResponseWrongRole)
+				fmt.Fprint(w, testPkiIssueResponseWrongRole)
 			}
 			if strings.HasSuffix(r.URL.Path, "correct-role") {
 				decoder := json.NewDecoder(r.Body)
@@ -452,9 +452,9 @@ func testHandler() http.Handler {
 				}{}
 				_ = decoder.Decode(&tstr)
 				if len(strings.Split(tstr.Alt_names, ",")) > 1 {
-					fmt.Fprintln(w, testPkiIssueResponseMultipleDomain)
+					fmt.Fprint(w, testPkiIssueResponseMultipleDomain)
 				} else {
-					fmt.Fprintln(w, testPkiIssueResponseSingleDomain)
+					fmt.Fprint(w, testPkiIssueResponseSingleDomain)
 				}
 			}
 		})
