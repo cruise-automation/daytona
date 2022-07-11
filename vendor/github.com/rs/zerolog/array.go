@@ -49,7 +49,7 @@ func (*Array) MarshalZerologArray(*Array) {
 func (a *Array) write(dst []byte) []byte {
 	dst = enc.AppendArrayStart(dst)
 	if len(a.buf) > 0 {
-		dst = append(append(dst, a.buf...))
+		dst = append(dst, a.buf...)
 	}
 	dst = enc.AppendArrayEnd(dst)
 	putArray(a)
@@ -193,7 +193,7 @@ func (a *Array) Float64(f float64) *Array {
 	return a
 }
 
-// Time append append t formated as string using zerolog.TimeFieldFormat.
+// Time append append t formatted as string using zerolog.TimeFieldFormat.
 func (a *Array) Time(t time.Time) *Array {
 	a.buf = enc.AppendTime(enc.AppendArrayDelim(a.buf), t, TimeFieldFormat)
 	return a
@@ -229,5 +229,12 @@ func (a *Array) IPPrefix(pfx net.IPNet) *Array {
 // MACAddr adds a MAC (Ethernet) address to the array
 func (a *Array) MACAddr(ha net.HardwareAddr) *Array {
 	a.buf = enc.AppendMACAddr(enc.AppendArrayDelim(a.buf), ha)
+	return a
+}
+
+// Dict adds the dict Event to the array
+func (a *Array) Dict(dict *Event) *Array {
+	dict.buf = enc.AppendEndMarker(dict.buf)
+	a.buf = append(enc.AppendArrayDelim(a.buf), dict.buf...)
 	return a
 }

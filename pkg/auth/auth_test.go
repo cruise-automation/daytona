@@ -130,7 +130,7 @@ func TestServiceAuth(t *testing.T) {
 func TestFetchVaultToken(t *testing.T) {
 	var config cfg.Config
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, testAuthResponse)
+		fmt.Fprint(w, testAuthResponse)
 	}))
 	defer ts.Close()
 

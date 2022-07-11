@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mattn/go-colorable"
 )
 
 const (
@@ -61,6 +63,9 @@ type ConsoleWriter struct {
 	// PartsExclude defines parts to not display in output.
 	PartsExclude []string
 
+	// FieldsExclude defines contextual fields to not display in output.
+	FieldsExclude []string
+
 	FormatTimestamp     Formatter
 	FormatLevel         Formatter
 	FormatCaller        Formatter
@@ -83,11 +88,21 @@ func NewConsoleWriter(options ...func(w *ConsoleWriter)) ConsoleWriter {
 		opt(&w)
 	}
 
+	// Fix color on Windows
+	if w.Out == os.Stdout || w.Out == os.Stderr {
+		w.Out = colorable.NewColorable(w.Out.(*os.File))
+	}
+
 	return w
 }
 
 // Write transforms the JSON input with formatters and appends to w.Out.
 func (w ConsoleWriter) Write(p []byte) (n int, err error) {
+	// Fix color on Windows
+	if w.Out == os.Stdout || w.Out == os.Stderr {
+		w.Out = colorable.NewColorable(w.Out.(*os.File))
+	}
+
 	if w.PartsOrder == nil {
 		w.PartsOrder = consoleDefaultPartsOrder()
 	}
@@ -125,6 +140,17 @@ func (w ConsoleWriter) Write(p []byte) (n int, err error) {
 func (w ConsoleWriter) writeFields(evt map[string]interface{}, buf *bytes.Buffer) {
 	var fields = make([]string, 0, len(evt))
 	for field := range evt {
+		var isExcluded bool
+		for _, excluded := range w.FieldsExclude {
+			if field == excluded {
+				isExcluded = true
+				break
+			}
+		}
+		if isExcluded {
+			continue
+		}
+
 		switch field {
 		case LevelFieldName, TimestampFieldName, MessageFieldName, CallerFieldName:
 			continue
@@ -133,7 +159,8 @@ func (w ConsoleWriter) writeFields(evt map[string]interface{}, buf *bytes.Buffer
 	}
 	sort.Strings(fields)
 
-	if len(fields) > 0 {
+	// Write space only if something has already been written to the buffer, and if there are fields.
+	if buf.Len() > 0 && len(fields) > 0 {
 		buf.WriteByte(' ')
 	}
 
@@ -256,10 +283,10 @@ func (w ConsoleWriter) writePart(buf *bytes.Buffer, evt map[string]interface{}, 
 	var s = f(evt[p])
 
 	if len(s) > 0 {
-		buf.WriteString(s)
-		if p != w.PartsOrder[len(w.PartsOrder)-1] { // Skip space for last part
-			buf.WriteByte(' ')
+		if buf.Len() > 0 {
+			buf.WriteByte(' ') // Write space only if not the first part
 		}
+		buf.WriteString(s)
 	}
 }
 
@@ -333,19 +360,19 @@ func consoleDefaultFormatLevel(noColor bool) Formatter {
 		var l string
 		if ll, ok := i.(string); ok {
 			switch ll {
-			case "trace":
+			case LevelTraceValue:
 				l = colorize("TRC", colorMagenta, noColor)
-			case "debug":
+			case LevelDebugValue:
 				l = colorize("DBG", colorYellow, noColor)
-			case "info":
+			case LevelInfoValue:
 				l = colorize("INF", colorGreen, noColor)
-			case "warn":
+			case LevelWarnValue:
 				l = colorize("WRN", colorRed, noColor)
-			case "error":
+			case LevelErrorValue:
 				l = colorize(colorize("ERR", colorRed, noColor), colorBold, noColor)
-			case "fatal":
+			case LevelFatalValue:
 				l = colorize(colorize("FTL", colorRed, noColor), colorBold, noColor)
-			case "panic":
+			case LevelPanicValue:
 				l = colorize(colorize("PNC", colorRed, noColor), colorBold, noColor)
 			default:
 				l = colorize("???", colorBold, noColor)
@@ -398,7 +425,7 @@ func consoleDefaultFormatFieldValue(i interface{}) string {
 
 func consoleDefaultFormatErrFieldName(noColor bool) Formatter {
 	return func(i interface{}) string {
-		return colorize(fmt.Sprintf("%s=", i), colorRed, noColor)
+		return colorize(fmt.Sprintf("%s=", i), colorCyan, noColor)
 	}
 }
 

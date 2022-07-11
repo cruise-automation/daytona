@@ -46,7 +46,7 @@ func TestInvalidToken(t *testing.T) {
 
 func TestValidToken(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, testTokenLookupPayload)
+		fmt.Fprint(w, testTokenLookupPayload)
 	}))
 	defer ts.Close()
 
@@ -61,7 +61,7 @@ func TestValidToken(t *testing.T) {
 
 func TestFileToken(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, testTokenLookupPayload)
+		fmt.Fprint(w, testTokenLookupPayload)
 	}))
 	defer ts.Close()
 	file, err := ioutil.TempFile(os.TempDir(), "daytona-test")
