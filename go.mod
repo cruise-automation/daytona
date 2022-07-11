@@ -13,6 +13,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/oauth2 v0.0.0-20220630143837-2104d58473e0
 	google.golang.org/api v0.86.0
+	gopkg.in/square/go-jose.v2 v2.5.1
 )
 
 require (
@@ -68,7 +69,6 @@ require (
 	google.golang.org/genproto v0.0.0-20220628213854-d9e0b6570c03 // indirect
 	google.golang.org/grpc v1.47.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
-	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

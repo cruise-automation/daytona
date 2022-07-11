@@ -28,6 +28,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var (
+	ErrInferRoleClaims = errors.New("could not parse service-account name / role name from claims")
+)
+
 // K8SService is an external service that vault can authenticate requests against
 type K8SService struct{}
 
@@ -89,12 +93,24 @@ func inferVaultAuthRoleName(config *cfg.Config) (string, error) {
 		return "", err
 	}
 
-	saName, ok := parsedJWT.Claims().Get("kubernetes.io/serviceaccount/service-account.name").(string)
-	if !ok || saName == "" {
-		return "", errors.New("could not parse UID from claims")
+	var roleName string
+
+	if name, ok := parsedJWT.Claims().Get("kubernetes.io/serviceaccount/service-account.name").(string); !ok {
+		if domain, ok := parsedJWT.Claims().Get("kubernetes.io").(map[string]interface{}); ok {
+			if sa, ok := domain["serviceaccount"].(map[string]interface{}); ok {
+				if name, ok := sa["name"].(string); ok {
+					roleName = name
+				}
+			}
+		}
+	} else {
+		roleName = name
+	}
+	if roleName == "" {
+		return "", ErrInferRoleClaims
 	}
 
-	return saName, nil
+	return roleName, nil
 }
 
 // inferVaultAuthMount attempts to figure out where the auth path for the current k8s cluster is in vault, and return it

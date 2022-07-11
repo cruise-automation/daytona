@@ -1,6 +1,7 @@
 ## 1.2.3 - UNRELEASED
 
 - Update to go 1.18.3
+- Update k8s role name inferring logic to support both pre and post version 1.21 jwt claim formats (#88)
 
 ## 1.2.2 - September 29, 2021
 
