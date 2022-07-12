@@ -30,7 +30,7 @@ import (
 // CertFetcher is responsible for fetching certificates & keys..
 func CertFetcher(client *api.Client, config cfg.Config) {
 	if config.PkiCertificate == "" || config.PkiPrivateKey == "" {
-		log.Info().Msg("Certificate or private key output path is empty, will not attempt to get certificate")
+		log.Trace().Msg("Certificate or private key output path is empty, will not attempt to get certificate")
 		return
 	}
 	log.Info().Msg("Getting certificate from vault...")

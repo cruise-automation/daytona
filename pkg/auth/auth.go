@@ -80,17 +80,19 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 	// If it didn't find one, attempt to read token from disk.
 	log.Info().Msg("Checking for an existing, valid vault token")
 
-	if checkToken(client) {
+	if err := checkToken(client); err == nil {
+		log.Info().Msg("Found an existing, valid token via VAULT_TOKEN")
 		return true
+	} else {
+		log.Info().Msgf("Couldn't use VAULT_TOKEN, attempting file token instead: %s", err)
 	}
 
-	log.Info().Msg("No token found in VAULT_TOKEN env, checking path")
-
-	if checkFileToken(client, config.TokenPath) {
+	if err := checkFileToken(client, config.TokenPath); err == nil {
+		log.Info().Str("tokenPath", config.TokenPath).Msg("Found an existing token at token path, setting as client token")
 		return true
+	} else {
+		log.Info().Err(err).Str("tokenPath", config.TokenPath).Msg("File token failed, trying to re-authenticate")
 	}
-
-	log.Info().Str("tokenPath", config.TokenPath).Msg("No token found, trying to re-authenticate")
 
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 15
@@ -132,33 +134,29 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 
 // checkToken ensures the currently set token token is valid, or unsets it.
 // Returns true if the token is valid
-func checkToken(client *api.Client) bool {
+func checkToken(client *api.Client) error {
 	if client.Token() == "" {
-		return false
+		return errors.New("no pre-existing client token detected")
 	}
 
 	// Check the validity of the token. If from disk, it could be expired.
 	_, err := client.Auth().Token().LookupSelf()
 	if err != nil {
-		log.Warn().Err(err).Msg("Invalid token. Deleting invalid token.")
 		client.ClearToken()
-
-		return false
+		return fmt.Errorf("existing token is invalid, clearing: %w", err)
 	}
 
-	return true
+	return nil
 }
 
 // checkFileToken attempts to read a token from the specified tokenPath, and ensures it is set and valid.
 // Returns false if it is unable to read the token, or the token is invalid
-func checkFileToken(client *api.Client, tokenPath string) bool {
+func checkFileToken(client *api.Client, tokenPath string) error {
 	fileToken, err := ioutil.ReadFile(tokenPath)
 	if err != nil {
-		log.Info().Str("tokenPath", tokenPath).Msg("Error reading existing token")
-		return false
+		return fmt.Errorf("error reading existing token at %s: %w", tokenPath, err)
 	}
 
-	log.Info().Str("tokenPath", tokenPath).Msg("Found an existing token, setting as client token")
 	client.SetToken(string(fileToken))
 
 	return checkToken(client)
