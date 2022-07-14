@@ -41,7 +41,7 @@ func TestInvalidToken(t *testing.T) {
 	}
 	client.SetToken(testToken)
 
-	assert.Equal(t, false, checkToken(client))
+	assert.Error(t, checkToken(client))
 }
 
 func TestValidToken(t *testing.T) {
@@ -56,7 +56,7 @@ func TestValidToken(t *testing.T) {
 	}
 	client.SetToken(testToken)
 
-	assert.Equal(t, true, checkToken(client))
+	assert.Equal(t, nil, checkToken(client))
 }
 
 func TestFileToken(t *testing.T) {
@@ -79,6 +79,6 @@ func TestFileToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, true, checkFileToken(client, file.Name()))
+	assert.Equal(t, nil, checkFileToken(client, file.Name()))
 	assert.Equal(t, testToken, client.Token())
 }

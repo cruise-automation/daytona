@@ -111,6 +111,8 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 			def.outputDestination = dest
 		}
 
+		log.Debug().Msgf("reading secret path for %s=%s", def.envkey, def.secretApex)
+
 		if def.plural {
 			err := def.Walk(client)
 			if err != nil {
@@ -118,12 +120,11 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 			}
 		}
 
-		log.Debug().Msgf("reading paths for %s=%s", def.envkey, def.secretApex)
 		err := parallelReader.ReadPaths(def)
 		if err != nil {
 			log.Fatal().Err(err).Msgf("failed to read paths for %s=%s", def.envkey, def.secretApex)
 		}
-		log.Debug().Msgf("finished reading paths for %s=%s", def.envkey, def.secretApex)
+		log.Debug().Int("secret_count", len(def.secrets)).Msgf("finished reading paths for %s=%s", def.envkey, def.secretApex)
 
 		defs = append(defs, def)
 	}
@@ -134,11 +135,18 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	// output the secret definitions
 	for _, def := range defs {
 		if config.SecretEnv {
-			setEnvSecrets(def.secrets)
+			err := setEnvSecrets(def.secrets)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to set env var")
+			}
 		}
 
 		if def.outputDestination != "" {
-			writeSecretsToDestination(def)
+			if err := writeSecretsToDestination(def); err != nil {
+				log.Fatal().Err(err).Msg("Failed to write secrets to destination")
+			} else {
+				log.Info().Int("count", len(def.secrets)).Str("outputDestination", def.outputDestination).Msg("Wrote secret")
+			}
 		}
 
 		if config.SecretPayloadPath != "" {
@@ -154,6 +162,8 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Could not write JSON secrets")
 		}
+		log.Info().Int("count", len(secretPayloadPathOutput)).Str("path", config.SecretPayloadPath).Msg("Wrote secrets")
+
 	}
 
 	// attempt to locate unmatched destinations
@@ -196,7 +206,6 @@ func writeSecretsToDestination(def *SecretDefinition) error {
 			if err != nil {
 				return fmt.Errorf("could not write secrets to file '%s': %s", def.outputDestination, err)
 			}
-			log.Info().Str("outputDestination", def.outputDestination).Msg("Wrote secret")
 		}
 	}
 	return nil
@@ -211,7 +220,6 @@ func writeJSONSecrets(secrets map[string]string, filepath string) error {
 	if err != nil {
 		return fmt.Errorf("could not write secrets to file '%s': %s", filepath, err)
 	}
-	log.Info().Int("count", len(secrets)).Str("path", filepath).Msg("Wrote secrets")
 	return nil
 }
 
@@ -221,7 +229,7 @@ func setEnvSecrets(secrets map[string]string) error {
 		if err != nil {
 			return fmt.Errorf("error from os.Setenv: %s", err)
 		}
-		log.Info().Str("var", k).Msg("Set env var")
+		log.Info().Str("var", strings.ToUpper(k)).Msg("Set env var")
 	}
 	return nil
 }
@@ -311,7 +319,7 @@ func (sd *SecretDefinition) Walk(client *api.Client) error {
 	if list == nil || len(list.Data) == 0 {
 		return fmt.Errorf("no secrets found under: %s", sd.secretApex)
 	}
-	log.Info().Str("secretApex", sd.secretApex).Msg("Starting iteration")
+
 	// list.Data is like: map[string]interface {}{"keys":[]interface {}{"API_KEY", "APPLICATION_KEY", "DB_PASS"}}
 	keys, ok := list.Data["keys"].([]interface{})
 	if !ok {
