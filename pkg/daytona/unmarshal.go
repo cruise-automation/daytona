@@ -1,71 +1,108 @@
 package daytona
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/api"
 )
 
 const (
-	vaultTagPath = "vault_path"
-	vaultTagKey  = "vault_key"
+	tagVaultPathKeyName     = "vault_path_key"
+	tagVaultPathDataKeyName = "vault_path_data_key"
 
-	vaultTagPathKey = "vault_path_key"
+	tagVaultDataKeyName = "vault_data_key"
 
-	defaultVaultTagField = "value"
+	defaultDataKeyFieldName = "value"
 )
 
-var ErrValueInput = errors.New("the provided value must be a struct pointer")
+var (
+	// ErrValueInput indicates the provided value is not a struct pointer
+	ErrValueInput = errors.New("the provided value must be a struct pointer")
+)
 
-type unmarshalSecretsConfig struct {
-	apex string
+// SecretUnmarshler reads data from Vault and stores the result(s) in the
+// a provided struct. This can be useful to inject sensitive configuration
+// items directly into config structs
+type SecretUnmarshler struct {
+	client      *api.Client
+	tokenString string
+	tokenFile   string
 }
 
-// An UnmarshalSecretsOption is an option for the UnmarshalSecrets function
-type UnmarshalSecretsOption interface {
-	apply(c *unmarshalSecretsConfig)
-}
-
-// WithApex returns an UnmarshalSecretsOption sets the apex value
-// for which the secrets unmarshaler should use
-func WithApex(apex string) UnmarshalSecretsOption {
-	return withApex(apex)
-}
-
-type withApex string
-
-func (w withApex) apply(c *unmarshalSecretsConfig) {
-	c.apex = strings.TrimSuffix(string(w), "/")
-}
-
-// UnmarshalSecrets traverses the value v recursively looking for tagged fields that
-// can be populated with secret data using the provided client and optional configured apex.
-// If the apex is configured, the tag vault_path_key is appended to the apex to construct
-// the final secret path. If the tag vault_path is provided, the apex is ignored.
-// A default key of 'default' is used on each path, it can be overridden using the vault_key tag.
-//
-//  Apex of 'secret/application' provided, combined to form 'secret/application/db_password'
-//  Field string `vault_path_key:"db_password"`
-//
-//  Apex of 'secret/application' provided, with key override
-//  Field string `vault_path_key:"db_password" vault_key:"password"`
-//
-//  vault_path represents a full secret path to fetch
-//  Field string `vault_path:"secret/application/db_password"`
-//  Field string `vault_path:"secret/application/db_password" vault_key:"password"` // key override
-func UnmarshalSecrets(client *api.Client, v interface{}, opts ...UnmarshalSecretsOption) error {
-	config := unmarshalSecretsConfig{}
-
+// NewSecretUnmarshler returns a new SecretUnmarshler, applying any options
+// that are supplied.
+func NewSecretUnmarshler(opts ...Option) (*SecretUnmarshler, error) {
+	var s SecretUnmarshler
 	for _, opt := range opts {
-		opt.apply(&config)
+		opt.Apply(&s)
 	}
 
+	if s.client == nil {
+		client, err := api.NewClient(api.DefaultConfig())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create new vault client: %w", err)
+		}
+		s.client = client
+	}
+
+	if s.tokenString != "" && s.tokenFile != "" {
+		return nil, errors.New("cannot use dual token sources, pick one")
+	}
+
+	if s.tokenString != "" {
+		s.client.SetToken(s.tokenString)
+	}
+
+	if s.tokenFile != "" {
+		b, err := ioutil.ReadFile(s.tokenFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read token from %s: %w", s.tokenFile, err)
+		}
+
+		s.client.SetToken(string(b))
+	}
+	return &s, nil
+}
+
+// Unmarshal makes a read request to vault using the supplied vault apex path
+// and stores the result(s) in the value pointed to by v. Unmarshal traverses the value v
+// recursively looking for tagged fields that can be populated with secret data.
+//
+// (DATA EXAMPLE #1) Consider the design of the following secret path: secret/application, that contains
+// several sub-keys:
+//
+//  API_KEY - the data being stored in the data key 'value'
+//  DB_PASSWORD - the data being stored in the data key 'value'
+//
+// (DATA EXAMPLE #2) Consider the design of the following secret path: secret/application/configs, that contains
+// several data keys
+//
+//  api_key
+//  db_password
+//
+// A field tagged with 'vault_path_key' implies that the apex is a top-level secret path,
+// and the value provided by 'vault_path_key' is the suffix key in the path. The full final path will
+// be a combination of the apex and the path key. e.g. Using the example #1 above, an apex of secret/application
+// with a 'vault_path_key' of DB_PASSWORD, will attempt to read the data stored in secret/application/DB_PASSSWORD.
+// By default a data key of 'value' is used. The data key can be customized via the tag `vault_path_data_key`
+//
+//  Field string `vault_path_key:"DB_PASSWORD"`
+//  Field string `vault_path_key:"DB_PASSWORD" vault_path_data_key:"password"` // data key override
+//
+// A field tagged with 'vault_data_key' implies that the apex is a full, final secret path
+// and the value provided by 'vault_data_key' is the name of the data key. e.g. an apex of secret/application/configs
+// with a 'vault_data_key' of db_password, will attempt to read the data stored in secret/application/configs, referncing
+// the db_password data key.
+//
+//  Field string `vault_data_key:"db_password"`
+func (su SecretUnmarshler) Unmarshal(ctx context.Context, apex string, v interface{}) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Ptr {
 		return ErrValueInput
@@ -86,21 +123,21 @@ func UnmarshalSecrets(client *api.Client, v interface{}, opts ...UnmarshalSecret
 			f = f.Elem()
 		}
 
-		path, valueIndex := parsePath(config.apex, val.Type().Field(i).Tag)
+		qualified, path, valueIndex := introspect(apex, val.Type().Field(i).Tag)
+		if !qualified && f.Kind() != reflect.Struct {
+			continue
+		}
+
 		switch f.Kind() {
 		case reflect.Struct:
-			err := UnmarshalSecrets(client, f.Addr().Interface(), opts...)
+			err := su.Unmarshal(ctx, path, f.Addr().Interface())
 			if err != nil {
 				return err
 			}
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			if path == "" {
-				continue
-			}
-
 			var iv int64
 
-			v, err := fetchValue(client, path, valueIndex)
+			v, err := fetchValue(ctx, su.client, path, valueIndex)
 			if err != nil {
 				return err
 			}
@@ -137,16 +174,13 @@ func UnmarshalSecrets(client *api.Client, v interface{}, opts ...UnmarshalSecret
 			}
 			f.SetInt(iv)
 		case reflect.Float32, reflect.Float64:
-			if path == "" {
-				continue
-			}
-
 			var iv float64
 
-			v, err := fetchValue(client, path, valueIndex)
+			v, err := fetchValue(ctx, su.client, path, valueIndex)
 			if err != nil {
 				return err
 			}
+
 			switch v := v.(type) {
 			case json.Number:
 				if value, err := v.Float64(); err == nil {
@@ -165,10 +199,7 @@ func UnmarshalSecrets(client *api.Client, v interface{}, opts ...UnmarshalSecret
 			}
 			f.SetFloat(iv)
 		case reflect.String:
-			if path == "" {
-				continue
-			}
-			v, err := fetchValue(client, path, valueIndex)
+			v, err := fetchValue(ctx, su.client, path, valueIndex)
 			if err != nil {
 				return err
 			}
@@ -178,10 +209,7 @@ func UnmarshalSecrets(client *api.Client, v interface{}, opts ...UnmarshalSecret
 				return fmt.Errorf("expected a string but was given type %T for field %s", v, fName)
 			}
 		case reflect.Bool:
-			if path == "" {
-				continue
-			}
-			v, err := fetchValue(client, path, valueIndex)
+			v, err := fetchValue(ctx, su.client, path, valueIndex)
 			if err != nil {
 				return err
 			}
@@ -208,32 +236,35 @@ func UnmarshalSecrets(client *api.Client, v interface{}, opts ...UnmarshalSecret
 	return nil
 }
 
-func parsePath(apex string, tag reflect.StructTag) (path, valueIndex string) {
-	p, ok := tag.Lookup(vaultTagPath)
-	if ok {
-		path = p
-	} else {
-		// try to use an apex
-		if apex != "" {
-			p, ok := tag.Lookup(vaultTagPathKey)
-			if ok {
-				path = fmt.Sprintf("%s/%s", apex, p)
-			}
+func introspect(apex string, tag reflect.StructTag) (qualified bool, path string, key string) {
+	pathKey, isPathKey := tag.Lookup(tagVaultPathKeyName)
+	dataKey, isDataKey := tag.Lookup(tagVaultDataKeyName)
+
+	if isPathKey && isDataKey {
+		// disqualified, unsolveable
+		return
+	}
+
+	path = apex
+	key = defaultDataKeyFieldName
+
+	if isPathKey {
+		qualified = true
+		path = fmt.Sprintf("%s/%s", apex, pathKey)
+		if dk, ok := tag.Lookup(tagVaultPathDataKeyName); ok {
+			key = dk
 		}
 	}
 
-	vi, ok := tag.Lookup(vaultTagKey)
-	if !ok {
-		valueIndex = defaultVaultTagField
-	} else {
-		valueIndex = vi
+	if isDataKey {
+		qualified = true
+		key = dataKey
 	}
-
-	return path, valueIndex
+	return
 }
 
-func fetchValue(client *api.Client, path, valueIndex string) (interface{}, error) {
-	secret, err := client.Logical().Read(path)
+func fetchValue(ctx context.Context, client *api.Client, path, valueIndex string) (interface{}, error) {
+	secret, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read secret %s: %w", path, err)
 	}
