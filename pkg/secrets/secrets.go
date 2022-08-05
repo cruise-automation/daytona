@@ -194,6 +194,11 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	}
 }
 
+// writeSecretsToDestination uses the provided SecretDefinition
+// and writes secret values to a configured destination. If the
+// SecretDestination is 'plural', a single file is written containing
+// all of the path's values. Otherwise, each secret is written to
+// its configured destination
 func writeSecretsToDestination(def *SecretDefinition) error {
 	if def.plural {
 		err := writeJSONSecrets(def.secrets, def.outputDestination)
@@ -211,6 +216,7 @@ func writeSecretsToDestination(def *SecretDefinition) error {
 	return nil
 }
 
+// writeJSONSecrets writes the supplied map of strings to a specified file path
 func writeJSONSecrets(secrets map[string]string, filepath string) error {
 	payloadJSON, err := json.Marshal(secrets)
 	if err != nil {
@@ -223,6 +229,8 @@ func writeJSONSecrets(secrets map[string]string, filepath string) error {
 	return nil
 }
 
+// setEnvSecrets sets the supplied map of strings to the configured environment
+// variables
 func setEnvSecrets(secrets map[string]string) error {
 	for k, v := range secrets {
 		err := os.Setenv(k, v)
@@ -234,6 +242,7 @@ func setEnvSecrets(secrets map[string]string) error {
 	return nil
 }
 
+// valueConverter converts the value provided and returns a type string
 func valueConverter(value interface{}) (string, error) {
 	switch v := value.(type) {
 	case string:
@@ -249,6 +258,7 @@ func valueConverter(value interface{}) (string, error) {
 	}
 }
 
+// writeFile writes the provides data to the provided path
 func writeFile(path string, data []byte) error {
 	err := helpers.WriteFile(path, data, 0600)
 	if err != nil {
@@ -257,6 +267,7 @@ func writeFile(path string, data []byte) error {
 	return nil
 }
 
+// addSecrets processes a SecretResult
 func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 	keyPath := secretResult.KeyPath
 	_, keyName := path.Split(keyPath)
@@ -266,8 +277,8 @@ func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve secret path %s: %w", keyPath, err)
 	}
-	if secret == nil {
-		return fmt.Errorf("vault listed a secret, but no data was returned when reading %s - %s; very strange", keyName, keyPath)
+	if secret == nil || secret.Data == nil {
+		return fmt.Errorf("no data was returned when reading %s - %s", keyName, keyPath)
 	}
 	secretData := secret.Data
 	if secret.RequestID == "" && len(secretData) == 0 {
