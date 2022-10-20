@@ -1,3 +1,7 @@
+## 1.2.4 - Unreleased 
+
+- Handle data reading inconsistencies in singular definitions that have more than one data key (#91)
+
 ## 1.2.3 - July 14, 2022
 
 - Update to go 1.18.3 (#87)
