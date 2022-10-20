@@ -285,8 +285,12 @@ func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 		return fmt.Errorf("vault listed a secret %s %s, but failed trying to read it; likely the rate-limiting retry attempts were exceeded", keyName, keyPath)
 	}
 
-	singleValueKey := os.Getenv(secretValueKeyPrefix + sd.secretID)
-	if singleValueKey != "" && !sd.plural {
+	if !sd.plural && sd.outputDestination != "" {
+		singleValueKey := defaultKeyName
+		if envKey := os.Getenv(secretValueKeyPrefix + sd.secretID); envKey != "" {
+			log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will read this value key instead of using the default")
+			singleValueKey = envKey
+		}
 		v, ok := secretData[singleValueKey]
 		if ok {
 			secretValue, err := valueConverter(v)
@@ -294,7 +298,6 @@ func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 				sd.Lock()
 				sd.secrets[singleValueKey] = secretValue
 				sd.Unlock()
-				log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will only read value")
 			}
 			return err
 		}
