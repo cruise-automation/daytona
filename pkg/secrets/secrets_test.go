@@ -439,7 +439,7 @@ func TestUnmatchedPluralDesintation(t *testing.T) {
 	os.Setenv("DAYTONA_SECRET_DESTINATION_tha", f1.Name())
 	os.Setenv("DAYTONA_SECRET_DESTINATION_jacka", f2.Name())
 
-	defer os.Unsetenv("VAULT_SECRET_APEX")
+	defer os.Unsetenv("VAULT_SECRETS_APEX")
 	defer os.Setenv("DAYTONA_SECRET_DESTINATION_tha", f1.Name())
 	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_jacka")
 
@@ -711,4 +711,98 @@ func TestBulkSecretWorker(t *testing.T) {
 	}
 
 	assert.Equal(t, 1800, len(secrets))
+}
+
+func TestSecretSingularDestination(t *testing.T) {
+	var config cfg.Config
+
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `
+		{
+			"auth": null,
+			"data": {
+			  "value": "standard",
+			  "password": "nonstandard"
+			},
+			"lease_duration": 3600,
+			"lease_id": "",
+			"renewable": false
+		  }
+		`)
+	}))
+	defer ts.Close()
+	client, err := testhelpers.GetTestClient(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	fmt.Println("HUH")
+
+	os.Setenv("VAULT_SECRET_APPLICATIONA", "secret/applicationA")
+	os.Setenv("DAYTONA_SECRET_DESTINATION_APPLICATIONA", file.Name())
+	defer os.Unsetenv("VAULT_SECRET_APPLICATIONA")
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_APPLICATIONA")
+
+	config.Workers = 3
+	SecretFetcher(client, config)
+
+	data, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "standard", string(data))
+}
+
+func TestSecretSingularDestinationKeyOverride(t *testing.T) {
+	var config cfg.Config
+
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `
+		{
+			"auth": null,
+			"data": {
+			  "value": "standard",
+			  "password": "nonstandard"
+			},
+			"lease_duration": 3600,
+			"lease_id": "",
+			"renewable": false
+		  }
+		`)
+	}))
+	defer ts.Close()
+	client, err := testhelpers.GetTestClient(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	os.Setenv("VAULT_SECRET_APPLICATIONA", "secret/applicationA")
+	os.Setenv("DAYTONA_SECRET_DESTINATION_APPLICATIONA", file.Name())
+	os.Setenv("VAULT_VALUE_KEY_APPLICATIONA", "password")
+
+	defer os.Unsetenv("VAULT_SECRET_APPLICATIONA")
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_APPLICATIONA")
+	defer os.Unsetenv("VAULT_VALUE_KEY_APPLICATIONA")
+
+	config.Workers = 3
+	SecretFetcher(client, config)
+
+	data, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "nonstandard", string(data))
 }
