@@ -469,7 +469,6 @@ func TestSecretPathAggregate(t *testing.T) {
 	ts := httptest.NewTLSServer(
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				fmt.Printf("here: %s", r.URL.Path)
 				switch {
 				case strings.HasPrefix(r.URL.Path, "/v1/secret/applicationa"):
 					q := r.URL.Query()
@@ -741,7 +740,6 @@ func TestSecretSingularDestination(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
-	fmt.Println("HUH")
 
 	os.Setenv("VAULT_SECRET_APPLICATIONA", "secret/applicationA")
 	os.Setenv("DAYTONA_SECRET_DESTINATION_APPLICATIONA", file.Name())
