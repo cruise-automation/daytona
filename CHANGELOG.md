@@ -1,6 +1,7 @@
-## 1.2.4 - Unreleased 
+## 1.2.4 - October 24, 2022
 
 - Handle data reading inconsistencies in singular definitions that have more than one data key (#91)
+- Initial release of secret Unmarshal function (#73)
 
 ## 1.2.3 - July 14, 2022
 
