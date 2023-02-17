@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/cruise-automation/daytona/pkg/auth"
 	cfg "github.com/cruise-automation/daytona/pkg/config"
@@ -211,6 +212,21 @@ func main() {
 	// users to override this default by using the VAULT_MAX_RETRIES env var
 	vaultConfig.MaxRetries = 5
 
+	
+	// Set the MaxRetryWait for rate-limited requests to a higher default, but allow
+	// users to override this default by using the VAULT_MAX_RETRY_WAIT env var. If we 
+	// minute-length rate limiting buckets with some jitter, the Retry-After header could
+	// indicate upto 69 seconds of wait time, so we want Vault to respect that.
+	vaultConfig.SetMaxRetryWait(70 * time.Second)
+	
+	if t := os.Getenv("VAULT_MAX_RETRY_WAIT"); t != "" {
+		retryWait, err := time.ParseDuration(t)
+		if err != nil {
+			log.Warn().Msgf("Error while parsing VAULT_MAX_RETRY_WAIT: %s Using default value", err.Error())
+		}
+		vaultConfig.SetMaxRetryWait(retryWait)
+	}
+	
 	if err := vaultConfig.ReadEnvironment(); err != nil {
 		log.Warn().Msgf("Error returned from Vault ReadEnvironment: %s", err.Error())
 	}
