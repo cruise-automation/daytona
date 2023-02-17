@@ -1,3 +1,7 @@
+## 1.2.5 - Unreleased
+
+- Add a longer default Max Retry Wait to allow for 1 minute long rate limiting buckets
+
 ## 1.2.4 - October 24, 2022
 
 - Handle data reading inconsistencies in singular definitions that have more than one data key (#91)
