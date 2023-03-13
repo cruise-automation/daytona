@@ -169,3 +169,127 @@ func TestFetchVaultTokenFailure(t *testing.T) {
 	}
 	assert.Contains(t, err.Error(), "big bad error")
 }
+
+var tokenLookupResponse = `{
+	"auth": {
+	  "client_token": "ABCD",
+	  "policies": ["web", "stage"],
+	  "metadata": {
+		"user": "robert"
+	  },
+	  "lease_duration": 10,
+	  "renewable": true
+	}
+}`
+
+var tokenRenewalResponse = `{
+	"auth": {
+	  "client_token": "brand-new-token",
+	  "policies": ["web", "stage"],
+	  "metadata": {
+		"user": "robert"
+	  },
+	  "lease_duration": 12,
+	  "renewable": true
+	}
+}`
+
+func TestRenewal(t *testing.T) {
+	t.Run("dont_renew_expired", func(t *testing.T) {
+		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, `{"auth":{"lease_duration": 0}}`)
+		}))
+
+		t.Cleanup(ts.Close)
+		client, err := testhelpers.GetTestClient(ts.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := "cannot renew an expired token"
+		_, err = renewToken(client, 60, 60)
+		if err.Error() != expected {
+			t.Fatalf("expected %s, got %s", expected, err.Error())
+		}
+	})
+
+	t.Run("nil_payload", func(t *testing.T) {
+		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/v1/auth/token/lookup-self":
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintln(w, tokenLookupResponse)
+			default:
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintln(w, `{}`)
+			}
+		}))
+
+		t.Cleanup(ts.Close)
+		client, err := testhelpers.GetTestClient(ts.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := "renewal auth payload was empty"
+		_, err = renewToken(client, 60, 60)
+		if err.Error() != expected {
+			t.Fatalf("expected %s, got %s", expected, err.Error())
+		}
+	})
+
+	t.Run("no_renewal", func(t *testing.T) {
+		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/v1/auth/token/lookup-self":
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintln(w, tokenLookupResponse)
+			default:
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintln(w, tokenRenewalResponse)
+			}
+		}))
+
+		t.Cleanup(ts.Close)
+		client, err := testhelpers.GetTestClient(ts.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		token, err := renewToken(client, 5, 60)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if token != "" {
+			t.Fatalf("didn't expect a new token, but received %s", token)
+
+		}
+	})
+
+	t.Run("basic_renewal", func(t *testing.T) {
+		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/v1/auth/token/lookup-self":
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintln(w, tokenLookupResponse)
+			default:
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintln(w, tokenRenewalResponse)
+			}
+		}))
+
+		t.Cleanup(ts.Close)
+		client, err := testhelpers.GetTestClient(ts.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		token, err := renewToken(client, 60, 60)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if token != "brand-new-token" {
+			t.Fatalf("expected to receive a token with %s, got %s", "brand-new-token", token)
+
+		}
+	})
+}
