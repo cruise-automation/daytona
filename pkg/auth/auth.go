@@ -166,35 +166,65 @@ func checkFileToken(client *api.Client, tokenPath string) error {
 func RenewService(client *api.Client, config cfg.Config) {
 	interval := time.Second * time.Duration(config.RenewalInterval)
 	log.Info().Dur("interval", interval).Msg("Starting the token renewer service")
-	ticker := time.Tick(interval)
+	ticker := time.NewTicker(interval)
 
 	for {
-		result, err := client.Auth().Token().LookupSelf()
+		log.Debug().Msg("attempting token renewal")
+		token, err := renewToken(client, config.RenewalThreshold, config.RenewalIncrement)
 		if err != nil {
-			log.Fatal().Err(err).Msg("The existing token failed renewal. Exiting.")
+			log.Fatal().Err(err).Msg("failed to renew token")
 		}
 
-		ttl, err := result.TokenTTL()
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to parse the token's TTL from JSON. Exiting.")
-		}
-
-		if ttl.Seconds() < float64(config.RenewalThreshold) {
-			fmt.Println("token ttl of", ttl.Seconds(), "is below threshold of", config.RenewalThreshold, ", renewing to", config.RenewalIncrement)
-			secret, err := client.Auth().Token().RenewSelf(int(config.RenewalIncrement))
-			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to renew the existing token. Exiting.")
-			}
-
-			client.SetToken(secret.Auth.ClientToken)
-
-			err = ioutil.WriteFile(config.TokenPath, []byte(secret.Auth.ClientToken), 0600)
+		if token != "" {
+			log.Debug().Msgf("vault token renewed for %d seconds", config.RenewalIncrement)
+			err = ioutil.WriteFile(config.TokenPath, []byte(token), 0600)
 			if err != nil {
 				log.Fatal().Str("tokenPath", config.TokenPath).Err(err).Msg("Could not write token to file. Exiting.")
 			}
 		} else {
-			log.Info().Dur("tokenTTL", ttl).Int64("renewalThreshold", config.RenewalThreshold).Msg("Existing token ttl is still above the threshold, skipping renewal")
+			log.Debug().Msg("token was not renewed")
 		}
-		<-ticker
+		<-ticker.C
 	}
+}
+
+// renewToken attempts to renew the client's direct token, returning a string
+// copy of the token, if it was renewed. Otherwise, the existing client token
+// should be considered valid.
+func renewToken(client *api.Client, threshold, increment int64) (string, error) {
+	result, err := client.Auth().Token().LookupSelf()
+	if err != nil {
+		return "", fmt.Errorf("failed to looking existing client token: %w", err)
+	}
+
+	ttl, err := result.TokenTTL()
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve the client token ttl: %w", err)
+	}
+
+	ttlSeconds := ttl.Seconds()
+	if ttlSeconds == 0 {
+		return "", errors.New("cannot renew an expired token")
+	}
+
+	if ttlSeconds < float64(threshold) {
+		secret, err := client.Auth().Token().RenewSelf(int(increment))
+		if err != nil {
+			return "", fmt.Errorf("failed to renew the existing token: %w", err)
+		}
+
+		if secret == nil {
+			return "", errors.New("renewal payload was empty")
+		}
+
+		if secret.Auth == nil {
+			return "", errors.New("renewal auth payload was empty")
+		}
+
+		if secret.Auth.ClientToken == "" {
+			return "", errors.New("client token was empty, this was unexpected ")
+		}
+		return secret.Auth.ClientToken, nil
+	}
+	return "", nil
 }
