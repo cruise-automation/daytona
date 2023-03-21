@@ -707,6 +707,11 @@ func (e *Event) TimeDiff(key string, t time.Time, start time.Time) *Event {
 	return e
 }
 
+// Any is a wrapper around Event.Interface.
+func (e *Event) Any(key string, i interface{}) *Event {
+	return e.Interface(key, i)
+}
+
 // Interface adds the field key with i marshaled using reflection.
 func (e *Event) Interface(key string, i interface{}) *Event {
 	if e == nil {
@@ -716,6 +721,15 @@ func (e *Event) Interface(key string, i interface{}) *Event {
 		return e.Object(key, obj)
 	}
 	e.buf = enc.AppendInterface(enc.AppendKey(e.buf, key), i)
+	return e
+}
+
+// Type adds the field key with val's type using reflection.
+func (e *Event) Type(key string, val interface{}) *Event {
+	if e == nil {
+		return e
+	}
+	e.buf = enc.AppendType(enc.AppendKey(e.buf, key), val)
 	return e
 }
 
@@ -744,11 +758,11 @@ func (e *Event) caller(skip int) *Event {
 	if e == nil {
 		return e
 	}
-	_, file, line, ok := runtime.Caller(skip + e.skipFrame)
+	pc, file, line, ok := runtime.Caller(skip + e.skipFrame)
 	if !ok {
 		return e
 	}
-	e.buf = enc.AppendString(enc.AppendKey(e.buf, CallerFieldName), CallerMarshalFunc(file, line))
+	e.buf = enc.AppendString(enc.AppendKey(e.buf, CallerFieldName), CallerMarshalFunc(pc, file, line))
 	return e
 }
 
