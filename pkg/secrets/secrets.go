@@ -51,6 +51,9 @@ type SecretDefinition struct {
 	paths             []string
 	secrets           map[string]string
 	plural            bool
+
+	// secretEnvMapping contains a map to correlate secret keys to env variable names
+	secretEnvMapping map[string]string
 }
 
 // SecretFetcher inspects the environment for variables that
@@ -81,9 +84,10 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 		}
 
 		def := &SecretDefinition{
-			envkey:     envKey,
-			secretApex: apex,
-			secrets:    make(map[string]string),
+			envkey:           envKey,
+			secretApex:       apex,
+			secrets:          make(map[string]string),
+			secretEnvMapping: make(map[string]string),
 		}
 
 		switch {
@@ -98,6 +102,16 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 			continue
 		default:
 			continue
+		}
+
+		// read all VAULT_VALUE_KEY_<def.secretID> variables for the secretEnvMapping
+		for _, env2 := range envs {
+			pair := strings.Split(env2, "=")
+			envKey := pair[0]
+			prefix := fmt.Sprintf("%s%s_", secretValueKeyPrefix, def.secretID)
+			if strings.HasPrefix(envKey, prefix) {
+				def.secretEnvMapping[os.Getenv(envKey)] = strings.TrimPrefix(envKey, prefix)
+			}
 		}
 
 		// look for a corresponding secretDestinationPrefix key.
@@ -135,7 +149,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 	// output the secret definitions
 	for _, def := range defs {
 		if config.SecretEnv {
-			err := setEnvSecrets(def.secrets)
+			err := setEnvSecrets(def)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to set env var")
 			}
@@ -200,7 +214,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 // all of the path's values. Otherwise, each secret is written to
 // its configured destination
 func writeSecretsToDestination(def *SecretDefinition) error {
-	if def.plural {
+	if def.plural || len(def.secretEnvMapping) > 1 {
 		err := writeJSONSecrets(def.secrets, def.outputDestination)
 		if err != nil {
 			return err
@@ -231,13 +245,17 @@ func writeJSONSecrets(secrets map[string]string, filepath string) error {
 
 // setEnvSecrets sets the supplied map of strings to the configured environment
 // variables
-func setEnvSecrets(secrets map[string]string) error {
-	for k, v := range secrets {
-		err := os.Setenv(k, v)
+func setEnvSecrets(sd *SecretDefinition) error {
+	for k, v := range sd.secrets {
+		envName := k
+		if envMapEntry, ok := sd.secretEnvMapping[k]; ok {
+			envName = envMapEntry
+		}
+		err := os.Setenv(envName, v)
 		if err != nil {
 			return fmt.Errorf("error from os.Setenv: %s", err)
 		}
-		log.Info().Str("var", strings.ToUpper(k)).Msg("Set env var")
+		log.Info().Str("var", envName).Msg("Set env var")
 	}
 	return nil
 }
@@ -285,7 +303,7 @@ func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 		return fmt.Errorf("vault listed a secret %s %s, but failed trying to read it; likely the rate-limiting retry attempts were exceeded", keyName, keyPath)
 	}
 
-	if !sd.plural && sd.outputDestination != "" {
+	if !sd.plural && sd.outputDestination != "" && len(sd.secretEnvMapping) == 0 {
 		singleValueKey := defaultKeyName
 		if envKey := os.Getenv(secretValueKeyPrefix + sd.secretID); envKey != "" {
 			log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will read this value key instead of using the default")
@@ -301,6 +319,15 @@ func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 			}
 			return err
 		}
+	}
+	if !sd.plural && len(sd.secretEnvMapping) > 0 {
+		for k, _ := range sd.secretEnvMapping {
+			log.Info().Str("key", k).Msg("Found an explicit vault value key, will read this value key instead of using the default")
+			if err := sd.copyValue(secretData, k); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
 	for k, v := range secretData {
@@ -318,6 +345,23 @@ func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 		}
 		sd.Unlock()
 	}
+	return nil
+}
+
+// copyValues copies a value from the secretData object returned by vault and writes it into the secrets map of the
+// SecretDefintion
+func (sd *SecretDefinition) copyValue(secretData map[string]interface{}, key string) error {
+	v, ok := secretData[key]
+	if !ok {
+		return fmt.Errorf("key not found in vault secret: %s", key)
+	}
+	secretValue, err := valueConverter(v)
+	if err != nil {
+		return err
+	}
+	sd.Lock()
+	sd.secrets[key] = secretValue
+	sd.Unlock()
 	return nil
 }
 
