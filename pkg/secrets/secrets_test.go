@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -288,7 +289,7 @@ func TestSecretAWalk(t *testing.T) {
 	os.Setenv("VAULT_SECRETS_COMMON", "secret/path/common")
 	os.Setenv("DAYTONA_SECRET_DESTINATION_COMMON", destinationPrefixFile.Name())
 	defer os.Unsetenv("VAULT_SECRETS_COMMON")
-	defer os.Unsetenv("VAULT_SECRETS_GENERIC")
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_COMMON")
 
 	config.SecretPayloadPath = file.Name()
 	SecretFetcher(client, config)
@@ -440,7 +441,7 @@ func TestUnmatchedPluralDesintation(t *testing.T) {
 	os.Setenv("DAYTONA_SECRET_DESTINATION_jacka", f2.Name())
 
 	defer os.Unsetenv("VAULT_SECRETS_APEX")
-	defer os.Setenv("DAYTONA_SECRET_DESTINATION_tha", f1.Name())
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_tha")
 	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_jacka")
 
 	SecretFetcher(client, config)
@@ -788,7 +789,7 @@ func TestSecretSingularDestinationKeyOverride(t *testing.T) {
 
 	os.Setenv("VAULT_SECRET_APPLICATIONA", "secret/applicationA")
 	os.Setenv("DAYTONA_SECRET_DESTINATION_APPLICATIONA", file.Name())
-	os.Setenv("VAULT_VALUE_KEY_APPLICATIONA", "password")
+	os.Setenv("VAULT_VALUE_KEY_APPLICATIONA_PASSWORD", "password")
 
 	defer os.Unsetenv("VAULT_SECRET_APPLICATIONA")
 	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_APPLICATIONA")
@@ -803,4 +804,123 @@ func TestSecretSingularDestinationKeyOverride(t *testing.T) {
 	}
 
 	assert.Equal(t, "nonstandard", string(data))
+}
+
+func TestSecretFetcher(t *testing.T) {
+	tests := []struct {
+		name      string
+		envVars   map[string]string
+		assertEnv map[string]string
+	}{
+		{
+			name: "Singular key override",
+			envVars: map[string]string{
+				"VAULT_SECRET_APPLICATIONA":               "secret/applicationA",
+				"VAULT_VALUE_KEY_APPLICATIONA_MYPASSWORD": "password",
+			},
+			assertEnv: map[string]string{
+				"MYPASSWORD": "p@ssw0rd",
+			},
+		},
+		{
+			name: "Multiple key override",
+			envVars: map[string]string{
+				"VAULT_SECRET_APPLICATIONA":               "secret/applicationA",
+				"VAULT_VALUE_KEY_APPLICATIONA_MYUSER":     "username",
+				"VAULT_VALUE_KEY_APPLICATIONA_MYPASSWORD": "password",
+			},
+			assertEnv: map[string]string{
+				"MYUSER":     "alice",
+				"MYPASSWORD": "p@ssw0rd",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var config cfg.Config
+
+			ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprintln(w, `
+				{
+					"auth": null,
+					"data": {
+					  "username": "alice",
+					  "password": "p@ssw0rd"
+					},
+					"lease_duration": 3600,
+					"lease_id": "",
+					"renewable": false
+				  }
+				`)
+			}))
+			defer ts.Close()
+
+			for key, value := range test.envVars {
+				os.Setenv(key, value)
+				defer os.Unsetenv(key)
+			}
+
+			config.Workers = 3
+			config.SecretEnv = true
+			client, err := testhelpers.GetTestClient(ts.URL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			SecretFetcher(client, config)
+
+			for key, value := range test.assertEnv {
+				assert.Equal(t, value, os.Getenv(key))
+				defer os.Unsetenv(key)
+			}
+		})
+	}
+}
+
+func TestCopyValue(t *testing.T) {
+	tests := []struct {
+		name        string
+		secretData  map[string]interface{}
+		key         string
+		expectedErr error
+		expectedMap map[string]string
+	}{
+		{
+			name: "key found",
+			secretData: map[string]interface{}{
+				"username": "alice",
+				"password": "p@ssw0rd",
+			},
+			key:         "username",
+			expectedErr: nil,
+			expectedMap: map[string]string{
+				"username": "alice",
+			},
+		},
+		{
+			name: "key not found",
+			secretData: map[string]interface{}{
+				"username": "alice",
+				"password": "p@ssw0rd",
+			},
+			key:         "email",
+			expectedErr: fmt.Errorf("key not found in vault secret: email"),
+			expectedMap: nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sd := &SecretDefinition{
+				secrets: make(map[string]string),
+			}
+			err := sd.copyValue(test.secretData, test.key)
+			if err != nil && err.Error() != test.expectedErr.Error() {
+				t.Errorf("expected error '%v' but got '%v'", test.expectedErr, err)
+			}
+			if err == nil && !reflect.DeepEqual(sd.secrets, test.expectedMap) {
+				t.Errorf("expected secrets map '%v' but got '%v'", test.expectedMap, sd.secrets)
+			}
+		})
+	}
 }

@@ -52,8 +52,9 @@ The following authentication methods are supported:
 
 `<STORAGE PATH PREFIX>_<secretID-SUFFIX>=<SECRET-APEX>`
 
-- `VAULT_SECRET_` (`<STORAGE PATH PREFIX>`): Singular Secret Storage Path Prefix
-- `VAULT_SECRETS_` (`<STORAGE PATH PREFIX>`): Plural (more than 1 secret beneath the specified path) Secret Storage Path Prefix
+- `VAULT_SECRET_`(`<STORAGE PATH PREFIX>`): Singular Secret Storage Path Prefix
+- `VAULT_SECRET_`(`<STORAGE PATH PREFIX>`)(`<ENV_VAR_NAME>`): Add the name of the resulting env variable
+- `VAULT_SECRETS_`(`<STORAGE PATH PREFIX>`): Plural (more than 1 secret beneath the specified path) Secret Storage Path Prefix
 - `secretID-SUFFIX`: The unique secret identifier that can be used to tie a Secret Storage Path Prefix to a corresponding Destination Prefix. The uniqueness of this value provides the ability to supply multiple secret paths.
 - `SECRET-APEX`: When used with **Singular** definitions, the Vault path where the secret exists in Vault that can be read. When used with **Plural** definitions, the Vault path where the secrets exist in Vault that can be listed and then read. This will fetch all secrets within the given Vault directory.
 
