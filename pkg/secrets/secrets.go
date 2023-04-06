@@ -51,6 +51,7 @@ type SecretDefinition struct {
 	paths             []string
 	secrets           map[string]string
 	plural            bool
+	secretEnv         bool
 }
 
 // SecretFetcher inspects the environment for variables that
@@ -84,6 +85,7 @@ func SecretFetcher(client *api.Client, config cfg.Config) {
 			envkey:     envKey,
 			secretApex: apex,
 			secrets:    make(map[string]string),
+			secretEnv:  config.SecretEnv,
 		}
 
 		switch {
@@ -285,22 +287,21 @@ func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 		return fmt.Errorf("vault listed a secret %s %s, but failed trying to read it; likely the rate-limiting retry attempts were exceeded", keyName, keyPath)
 	}
 
+	envKey := os.Getenv(secretValueKeyPrefix + sd.secretID)
+	if envKey != "" {
+		log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Msg("Found an explicit vault value key, will read this value key instead of using the default")
+	}
+
+	if !sd.plural && sd.secretEnv && envKey != "" {
+		return sd.copyValue(secretData, envKey)
+	}
+
 	if !sd.plural && sd.outputDestination != "" {
 		singleValueKey := defaultKeyName
-		if envKey := os.Getenv(secretValueKeyPrefix + sd.secretID); envKey != "" {
-			log.Info().Str("key", secretValueKeyPrefix+sd.secretID).Str("value", singleValueKey).Msg("Found an explicit vault value key, will read this value key instead of using the default")
+		if envKey != "" {
 			singleValueKey = envKey
 		}
-		v, ok := secretData[singleValueKey]
-		if ok {
-			secretValue, err := valueConverter(v)
-			if err == nil {
-				sd.Lock()
-				sd.secrets[singleValueKey] = secretValue
-				sd.Unlock()
-			}
-			return err
-		}
+		return sd.copyValue(secretData, singleValueKey)
 	}
 
 	for k, v := range secretData {
@@ -317,6 +318,24 @@ func (sd *SecretDefinition) addSecrets(secretResult *SecretResult) error {
 			sd.secrets[expandedKeyName] = secretValue
 		}
 		sd.Unlock()
+	}
+	return nil
+}
+
+// copyValues copies a value from the secretData object returned by vault and writes it into the secrets map of the
+// SecretDefintion
+func (sd *SecretDefinition) copyValue(secretData map[string]interface{}, key string) error {
+	v, ok := secretData[key]
+	if ok {
+		secretValue, err := valueConverter(v)
+		if err == nil {
+			sd.Lock()
+			sd.secrets[key] = secretValue
+			sd.Unlock()
+			return nil
+		} else {
+			return err
+		}
 	}
 	return nil
 }
