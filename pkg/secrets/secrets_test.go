@@ -288,7 +288,7 @@ func TestSecretAWalk(t *testing.T) {
 	os.Setenv("VAULT_SECRETS_COMMON", "secret/path/common")
 	os.Setenv("DAYTONA_SECRET_DESTINATION_COMMON", destinationPrefixFile.Name())
 	defer os.Unsetenv("VAULT_SECRETS_COMMON")
-	defer os.Unsetenv("VAULT_SECRETS_GENERIC")
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_COMMON")
 
 	config.SecretPayloadPath = file.Name()
 	SecretFetcher(client, config)
@@ -440,7 +440,7 @@ func TestUnmatchedPluralDesintation(t *testing.T) {
 	os.Setenv("DAYTONA_SECRET_DESTINATION_jacka", f2.Name())
 
 	defer os.Unsetenv("VAULT_SECRETS_APEX")
-	defer os.Setenv("DAYTONA_SECRET_DESTINATION_tha", f1.Name())
+	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_tha")
 	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_jacka")
 
 	SecretFetcher(client, config)
@@ -803,4 +803,92 @@ func TestSecretSingularDestinationKeyOverride(t *testing.T) {
 	}
 
 	assert.Equal(t, "nonstandard", string(data))
+}
+
+func TestSecretSingularEnvKeyOverride(t *testing.T) {
+	var config cfg.Config
+
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `
+		{
+			"auth": null,
+			"data": {
+			  "username": "alice",
+			  "password": "p@ssw0rd"
+			},
+			"lease_duration": 3600,
+			"lease_id": "",
+			"renewable": false
+		  }
+		`)
+	}))
+	defer ts.Close()
+	client, err := testhelpers.GetTestClient(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("VAULT_SECRET_APPLICATIONA", "secret/applicationA")
+	os.Setenv("VAULT_VALUE_KEY_APPLICATIONA", "password")
+
+	defer os.Unsetenv("VAULT_SECRET_APPLICATIONA")
+	defer os.Unsetenv("VAULT_VALUE_KEY_APPLICATIONA")
+	defer os.Unsetenv("password")
+
+	config.Workers = 3
+	config.SecretEnv = true
+	SecretFetcher(client, config)
+
+	assert.Equal(t, "p@ssw0rd", os.Getenv("password"))
+}
+
+func TestCopyValue(t *testing.T) {
+	tests := []struct {
+		name            string
+		secretData      map[string]interface{}
+		key             string
+		expectedSecrets map[string]string
+		expectedError   error
+	}{
+		{
+			name: "copy value",
+			secretData: map[string]interface{}{
+				"foo": "bar",
+			},
+			key: "foo",
+			expectedSecrets: map[string]string{
+				"foo": "bar",
+			},
+			expectedError: nil,
+		},
+		{
+			name: "value not found",
+			secretData: map[string]interface{}{
+				"foo": "bar",
+			},
+			key:             "baz",
+			expectedSecrets: map[string]string{},
+			expectedError:   nil,
+		},
+		{
+			name: "value conversion error",
+			secretData: map[string]interface{}{
+				"foo": 42,
+			},
+			key:             "foo",
+			expectedSecrets: map[string]string{},
+			expectedError:   fmt.Errorf("unsupported value type retrieved from vault: int"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sd := &SecretDefinition{secrets: map[string]string{}}
+
+			err := sd.copyValue(tt.secretData, tt.key)
+
+			assert.Equal(t, tt.expectedSecrets, sd.secrets)
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
 }
