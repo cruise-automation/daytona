@@ -1,6 +1,16 @@
+## 1.2.5 - UNRELEASED
+
+- Remove references to deprecated ioutil package (#103)
+- Enforce linting, fix suggestions (#102)
+- Write env variable for single key, if not also written to file (#101)
+- Update direct dependencies (#98)
+- Fix token renewal panic (#97)
+
 ## 1.2.4 - October 24, 2022
 
+- Remove unnecessary print statements from tests (#92)
 - Handle data reading inconsistencies in singular definitions that have more than one data key (#91)
+- Improve error messaging when reading a secret value that is not found (#90)
 - Initial release of secret Unmarshal function (#73)
 
 ## 1.2.3 - July 14, 2022
