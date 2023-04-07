@@ -39,6 +39,10 @@ coverage:
 lint:
 	go vet ${PACKAGES}
 	gofmt -d -l ${GOFILES}
+	test -z $(shell gofmt -d -l ${GOFILES})
+	GO111MODULE=off \
+	go get -u golang.org/x/lint/golint
+	golint -set_exit_status ${PACKAGES}
 
 build:
 	CGO_ENABLED=0 go build ${GO_LDFLAGS} -o daytona cmd/daytona/main.go

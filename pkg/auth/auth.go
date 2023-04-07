@@ -80,19 +80,19 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 	// If it didn't find one, attempt to read token from disk.
 	log.Info().Msg("Checking for an existing, valid vault token")
 
-	if err := checkToken(client); err == nil {
+	err := checkToken(client)
+	if err == nil {
 		log.Info().Msg("Found an existing, valid token via VAULT_TOKEN")
 		return true
-	} else {
-		log.Info().Msgf("Couldn't use VAULT_TOKEN, attempting file token instead: %s", err)
 	}
+	log.Info().Msgf("Couldn't use VAULT_TOKEN, attempting file token instead: %s", err)
 
-	if err := checkFileToken(client, config.TokenPath); err == nil {
+	err = checkFileToken(client, config.TokenPath)
+	if err == nil {
 		log.Info().Str("tokenPath", config.TokenPath).Msg("Found an existing token at token path, setting as client token")
 		return true
-	} else {
-		log.Info().Err(err).Str("tokenPath", config.TokenPath).Msg("File token failed, trying to re-authenticate")
 	}
+	log.Info().Err(err).Str("tokenPath", config.TokenPath).Msg("File token failed, trying to re-authenticate")
 
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 15

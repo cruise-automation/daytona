@@ -333,9 +333,8 @@ func (sd *SecretDefinition) copyValue(secretData map[string]interface{}, key str
 			sd.secrets[key] = secretValue
 			sd.Unlock()
 			return nil
-		} else {
-			return err
 		}
+		return err
 	}
 	return nil
 }

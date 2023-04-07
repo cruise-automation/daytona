@@ -78,14 +78,14 @@ func NewSecretUnmarshler(opts ...Option) (*SecretUnmarshler, error) {
 // (DATA EXAMPLE #1) Consider the design of the following secret path: secret/application, that contains
 // several sub-keys:
 //
-//  API_KEY - the data being stored in the data key 'value'
-//  DB_PASSWORD - the data being stored in the data key 'value'
+//	API_KEY - the data being stored in the data key 'value'
+//	DB_PASSWORD - the data being stored in the data key 'value'
 //
 // (DATA EXAMPLE #2) Consider the design of the following secret path: secret/application/configs, that contains
 // several data keys
 //
-//  api_key
-//  db_password
+//	api_key
+//	db_password
 //
 // A field tagged with 'vault_path_key' implies that the apex is a top-level secret path,
 // and the value provided by 'vault_path_key' is the suffix key in the path. The full final path will
@@ -93,15 +93,15 @@ func NewSecretUnmarshler(opts ...Option) (*SecretUnmarshler, error) {
 // with a 'vault_path_key' of DB_PASSWORD, will attempt to read the data stored in secret/application/DB_PASSSWORD.
 // By default a data key of 'value' is used. The data key can be customized via the tag `vault_path_data_key`
 //
-//  Field string `vault_path_key:"DB_PASSWORD"`
-//  Field string `vault_path_key:"DB_PASSWORD" vault_path_data_key:"password"` // data key override
+//	Field string `vault_path_key:"DB_PASSWORD"`
+//	Field string `vault_path_key:"DB_PASSWORD" vault_path_data_key:"password"` // data key override
 //
 // A field tagged with 'vault_data_key' implies that the apex is a full, final secret path
 // and the value provided by 'vault_data_key' is the name of the data key. e.g. an apex of secret/application/configs
 // with a 'vault_data_key' of db_password, will attempt to read the data stored in secret/application/configs, referncing
 // the db_password data key.
 //
-//  Field string `vault_data_key:"db_password"`
+//	Field string `vault_data_key:"db_password"`
 func (su SecretUnmarshler) Unmarshal(ctx context.Context, apex string, v interface{}) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Ptr {
