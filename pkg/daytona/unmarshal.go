@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"strconv"
 	"time"
@@ -61,7 +61,7 @@ func NewSecretUnmarshler(opts ...Option) (*SecretUnmarshler, error) {
 	}
 
 	if s.tokenFile != "" {
-		b, err := ioutil.ReadFile(s.tokenFile)
+		b, err := os.ReadFile(s.tokenFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read token from %s: %w", s.tokenFile, err)
 		}

@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/briankassouf/jose/jws"
@@ -44,7 +44,7 @@ func (k *K8SService) Auth(client *api.Client, config cfg.Config) (string, error)
 		return "", fmt.Errorf("kubernetes auth token path is mssing")
 	}
 
-	data, err := ioutil.ReadFile(config.K8STokenPath)
+	data, err := os.ReadFile(config.K8STokenPath)
 	if err != nil {
 		return "", fmt.Errorf("could not read JWT from file %s", err.Error())
 	}
@@ -82,7 +82,7 @@ func InferK8SConfig(config *cfg.Config) {
 // inferVaultAuthRoleName figures out the current k8s service account name, and returns it.
 // This can be assumed to match a a vault role if configured properly.
 func inferVaultAuthRoleName(config *cfg.Config) (string, error) {
-	data, err := ioutil.ReadFile(config.K8STokenPath)
+	data, err := os.ReadFile(config.K8STokenPath)
 	if err != nil {
 		return "", fmt.Errorf("could not read JWT from file %s", err.Error())
 	}

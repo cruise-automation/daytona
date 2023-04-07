@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,7 +8,7 @@ import (
 
 func TestWriteFileParents(t *testing.T) {
 	parentDir := os.TempDir()
-	td, err := ioutil.TempDir(parentDir, "*-iykyk")
+	td, err := os.MkdirTemp(parentDir, "*-iykyk")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +27,7 @@ func TestWriteFileParents(t *testing.T) {
 }
 
 func TestWriteFile(t *testing.T) {
-	tf, err := ioutil.TempFile("", "*-iykyk")
+	tf, err := os.CreateTemp("", "*-iykyk")
 	if err != nil {
 		t.Fatal(err)
 	}

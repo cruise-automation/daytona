@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -56,7 +55,7 @@ func TestInferRoleName(t *testing.T) {
 		}
 
 		content := []byte(token)
-		tmpfile, err := ioutil.TempFile("", "k8jawn")
+		tmpfile, err := os.CreateTemp("", "k8jawn")
 		if err != nil {
 			t.Fatalf("%s: %s", scenario.TestName, err)
 		}

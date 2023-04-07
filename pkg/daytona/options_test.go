@@ -1,7 +1,6 @@
 package daytona
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"testing"
@@ -46,7 +45,7 @@ func TestOptionsWithTokenString(t *testing.T) {
 
 func TestOptionsWithTokenFile(t *testing.T) {
 	fileTokenContents := "THIS IS MY FILE TOKEN"
-	file, err := ioutil.TempFile("", "test-vault-token")
+	file, err := os.CreateTemp("", "test-vault-token")
 	if err != nil {
 		log.Fatal(err)
 	}

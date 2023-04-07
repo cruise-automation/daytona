@@ -17,7 +17,6 @@ package auth
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -116,7 +115,7 @@ func TestServiceAuth(t *testing.T) {
 	testService := new(MockedService)
 	testService.On("Auth").Return("62b858f9-529c-6b26-e0b8-0457b6aacdb4", nil)
 
-	tokenFile, err := ioutil.TempFile(os.TempDir(), "vault-token-test")
+	tokenFile, err := os.CreateTemp(os.TempDir(), "vault-token-test")
 	if err != nil {
 		t.Fatal(err)
 	}

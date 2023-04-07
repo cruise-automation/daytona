@@ -19,7 +19,7 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -51,7 +51,7 @@ func authenticate(client *api.Client, config cfg.Config, svc Authenticator) bool
 		return false
 	}
 
-	err = ioutil.WriteFile(config.TokenPath, []byte(vaultToken), 0600)
+	err = os.WriteFile(config.TokenPath, []byte(vaultToken), 0600)
 	if err != nil {
 		log.Error().Err(err).Str("tokenPath", config.TokenPath).Msg("could not write token")
 		return false
@@ -152,7 +152,7 @@ func checkToken(client *api.Client) error {
 // checkFileToken attempts to read a token from the specified tokenPath, and ensures it is set and valid.
 // Returns false if it is unable to read the token, or the token is invalid
 func checkFileToken(client *api.Client, tokenPath string) error {
-	fileToken, err := ioutil.ReadFile(tokenPath)
+	fileToken, err := os.ReadFile(tokenPath)
 	if err != nil {
 		return fmt.Errorf("error reading existing token at %s: %w", tokenPath, err)
 	}
@@ -177,7 +177,7 @@ func RenewService(client *api.Client, config cfg.Config) {
 
 		if token != "" {
 			log.Debug().Msgf("vault token renewed for %d seconds", config.RenewalIncrement)
-			err = ioutil.WriteFile(config.TokenPath, []byte(token), 0600)
+			err = os.WriteFile(config.TokenPath, []byte(token), 0600)
 			if err != nil {
 				log.Fatal().Str("tokenPath", config.TokenPath).Err(err).Msg("Could not write token to file. Exiting.")
 			}

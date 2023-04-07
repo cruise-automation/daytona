@@ -19,7 +19,7 @@ package auth
 import (
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -54,7 +54,7 @@ func (a *AWSService) Auth(client *api.Client, config cfg.Config) (string, error)
 	if err != nil {
 		return "", err
 	}
-	requestBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
+	requestBody, err := io.ReadAll(stsRequest.HTTPRequest.Body)
 	if err != nil {
 		return "", err
 	}
