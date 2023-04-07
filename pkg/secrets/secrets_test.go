@@ -19,7 +19,6 @@ package secrets
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -56,7 +55,7 @@ func TestSecretPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	file, err := os.CreateTemp(os.TempDir(), "secret-path-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +68,7 @@ func TestSecretPath(t *testing.T) {
 	SecretFetcher(client, config)
 
 	secrets := make(map[string]string)
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,12 +104,12 @@ func TestSecretDirectPath(t *testing.T) {
 		t.Fatal(err)
 	}
 	config.SecretPayloadPath = ""
-	file, err := ioutil.TempFile(os.TempDir(), "secret-direct-path-")
+	file, err := os.CreateTemp(os.TempDir(), "secret-direct-path-")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	arbFile, err := ioutil.TempFile(os.TempDir(), "secret-direct-path-arb-")
+	arbFile, err := os.CreateTemp(os.TempDir(), "secret-direct-path-arb-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,11 +127,11 @@ func TestSecretDirectPath(t *testing.T) {
 	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_HELLO")
 	SecretFetcher(client, config)
 
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	arbData, err := ioutil.ReadFile(arbFile.Name())
+	arbData, err := os.ReadFile(arbFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,16 +190,16 @@ func TestSecretDirectPathArbitraryIdentifiers(t *testing.T) {
 		t.Fatal(err)
 	}
 	config.SecretPayloadPath = ""
-	fileLower, err := ioutil.TempFile(os.TempDir(), "secret-direct-path-arbitrary-lower-")
+	fileLower, err := os.CreateTemp(os.TempDir(), "secret-direct-path-arbitrary-lower-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fileUpper, err := ioutil.TempFile(os.TempDir(), "secret-direct-path-arbitrary-upper-")
+	fileUpper, err := os.CreateTemp(os.TempDir(), "secret-direct-path-arbitrary-upper-")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fileInconsistent, err := ioutil.TempFile(os.TempDir(), "secret-direct-path-arbitrary-inconsistent-")
+	fileInconsistent, err := os.CreateTemp(os.TempDir(), "secret-direct-path-arbitrary-inconsistent-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,15 +222,15 @@ func TestSecretDirectPathArbitraryIdentifiers(t *testing.T) {
 	defer os.Unsetenv("DAYTONA_SECRET_DESTINATION_whoismikejones")
 	SecretFetcher(client, config)
 
-	dataLower, err := ioutil.ReadFile(fileLower.Name())
+	dataLower, err := os.ReadFile(fileLower.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	dataUpper, err := ioutil.ReadFile(fileUpper.Name())
+	dataUpper, err := os.ReadFile(fileUpper.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	dataInconsistent, err := ioutil.ReadFile(fileInconsistent.Name())
+	dataInconsistent, err := os.ReadFile(fileInconsistent.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,12 +272,12 @@ func TestSecretAWalk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err := ioutil.TempFile(os.TempDir(), "secret-walk-")
+	file, err := os.CreateTemp(os.TempDir(), "secret-walk-")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	destinationPrefixFile, err := ioutil.TempFile(os.TempDir(), "secret-walk-destination-")
+	destinationPrefixFile, err := os.CreateTemp(os.TempDir(), "secret-walk-destination-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +293,7 @@ func TestSecretAWalk(t *testing.T) {
 	SecretFetcher(client, config)
 
 	secrets := make(map[string]string)
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -304,7 +303,7 @@ func TestSecretAWalk(t *testing.T) {
 	}
 
 	destSecrets := make(map[string]string)
-	destinationData, err := ioutil.ReadFile(destinationPrefixFile.Name())
+	destinationData, err := os.ReadFile(destinationPrefixFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,7 +368,7 @@ func TestUnmatchedSinularDesintation(t *testing.T) {
 	}
 
 	config.SecretPayloadPath = ""
-	file, err := ioutil.TempFile(os.TempDir(), "secret-destination-path")
+	file, err := os.CreateTemp(os.TempDir(), "secret-destination-path")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,7 +382,7 @@ func TestUnmatchedSinularDesintation(t *testing.T) {
 
 	SecretFetcher(client, config)
 
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -422,12 +421,12 @@ func TestUnmatchedPluralDesintation(t *testing.T) {
 	}
 
 	config.SecretPayloadPath = ""
-	f1, err := ioutil.TempFile(os.TempDir(), "secret-destination-path")
+	f1, err := os.CreateTemp(os.TempDir(), "secret-destination-path")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	f2, err := ioutil.TempFile(os.TempDir(), "secret-destination-path")
+	f2, err := os.CreateTemp(os.TempDir(), "secret-destination-path")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -454,7 +453,7 @@ func TestUnmatchedPluralDesintation(t *testing.T) {
 	}
 
 	for i := range scenarios {
-		data, err := ioutil.ReadFile(scenarios[i].file)
+		data, err := os.ReadFile(scenarios[i].file)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -501,7 +500,7 @@ func TestSecretPathAggregate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	file, err := os.CreateTemp(os.TempDir(), "secret-path-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -518,7 +517,7 @@ func TestSecretPathAggregate(t *testing.T) {
 	SecretFetcher(client, config)
 
 	secrets := make(map[string]string)
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -588,7 +587,7 @@ func TestExcessiveSecretPathIteration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	file, err := os.CreateTemp(os.TempDir(), "secret-path-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -615,7 +614,7 @@ func TestExcessiveSecretPathIteration(t *testing.T) {
 	}
 
 	secrets := make(map[string]string)
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -673,7 +672,7 @@ func TestBulkSecretWorker(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	file, err := os.CreateTemp(os.TempDir(), "secret-path-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -700,7 +699,7 @@ func TestBulkSecretWorker(t *testing.T) {
 	}
 
 	secrets := make(map[string]string)
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -735,7 +734,7 @@ func TestSecretSingularDestination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	file, err := os.CreateTemp(os.TempDir(), "secret-path-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -749,7 +748,7 @@ func TestSecretSingularDestination(t *testing.T) {
 	config.Workers = 3
 	SecretFetcher(client, config)
 
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -780,7 +779,7 @@ func TestSecretSingularDestinationKeyOverride(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err := ioutil.TempFile(os.TempDir(), "secret-path-")
+	file, err := os.CreateTemp(os.TempDir(), "secret-path-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -797,7 +796,7 @@ func TestSecretSingularDestinationKeyOverride(t *testing.T) {
 	config.Workers = 3
 	SecretFetcher(client, config)
 
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -18,7 +18,6 @@ package auth
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -64,12 +63,12 @@ func TestFileToken(t *testing.T) {
 		fmt.Fprint(w, testTokenLookupPayload)
 	}))
 	defer ts.Close()
-	file, err := ioutil.TempFile(os.TempDir(), "daytona-test")
+	file, err := os.CreateTemp(os.TempDir(), "daytona-test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = ioutil.WriteFile(file.Name(), []byte(testToken), 0644)
+	err = os.WriteFile(file.Name(), []byte(testToken), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}

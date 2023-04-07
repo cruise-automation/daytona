@@ -19,7 +19,6 @@ package pki
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -470,13 +469,13 @@ func TestSingleDomainCertIssuance(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyFile, err := ioutil.TempFile(os.TempDir(), "pki-test-")
+	keyFile, err := os.CreateTemp(os.TempDir(), "pki-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(keyFile.Name())
 
-	certFile, err := ioutil.TempFile(os.TempDir(), "pki-test-")
+	certFile, err := os.CreateTemp(os.TempDir(), "pki-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,12 +490,12 @@ func TestSingleDomainCertIssuance(t *testing.T) {
 	config.PkiCertificate = certFile.Name()
 	CertFetcher(client, config)
 
-	singleDomainCertNoChainData, err := ioutil.ReadFile(certFile.Name())
+	singleDomainCertNoChainData, err := os.ReadFile(certFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	keyFileData, err := ioutil.ReadFile(keyFile.Name())
+	keyFileData, err := os.ReadFile(keyFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -507,7 +506,7 @@ func TestSingleDomainCertIssuance(t *testing.T) {
 	config.PkiUseCaChain = true
 	CertFetcher(client, config)
 
-	singleDomainCertWithChainData, err := ioutil.ReadFile(certFile.Name())
+	singleDomainCertWithChainData, err := os.ReadFile(certFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -525,13 +524,13 @@ func TestMultipleDomainCertIssuance(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyFile, err := ioutil.TempFile(os.TempDir(), "pki-test-")
+	keyFile, err := os.CreateTemp(os.TempDir(), "pki-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(keyFile.Name())
 
-	certFile, err := ioutil.TempFile(os.TempDir(), "pki-test-")
+	certFile, err := os.CreateTemp(os.TempDir(), "pki-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -543,11 +542,11 @@ func TestMultipleDomainCertIssuance(t *testing.T) {
 	config.PkiPrivateKey = keyFile.Name()
 	config.PkiCertificate = certFile.Name()
 	CertFetcher(client, config)
-	multipleDomainCertNoChainData, err := ioutil.ReadFile(certFile.Name())
+	multipleDomainCertNoChainData, err := os.ReadFile(certFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	keyFileData, err := ioutil.ReadFile(keyFile.Name())
+	keyFileData, err := os.ReadFile(keyFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -556,7 +555,7 @@ func TestMultipleDomainCertIssuance(t *testing.T) {
 
 	config.PkiUseCaChain = true
 	CertFetcher(client, config)
-	multipleDomainCertWithChainData, err := ioutil.ReadFile(certFile.Name())
+	multipleDomainCertWithChainData, err := os.ReadFile(certFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -573,13 +572,13 @@ func TestCertIssuanceErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keyFile, err := ioutil.TempFile(os.TempDir(), "pki-test-")
+	keyFile, err := os.CreateTemp(os.TempDir(), "pki-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(keyFile.Name())
 
-	certFile, err := ioutil.TempFile(os.TempDir(), "pki-test-")
+	certFile, err := os.CreateTemp(os.TempDir(), "pki-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
