@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package auth
 
 import (
@@ -27,6 +28,7 @@ import (
 // AzureService is an external service that vault can authenticate request against
 type AzureService struct{}
 
+// Auth is used to authenticate to the service
 func (a *AzureService) Auth(client *api.Client, config cfg.Config) (string, error) {
 	metadata, err := a.getMetadata()
 	if err != nil {

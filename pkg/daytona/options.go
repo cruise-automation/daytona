@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+// Option defines how an option should be applied
 type Option interface {
 	Apply(s *SecretUnmarshler)
 }
