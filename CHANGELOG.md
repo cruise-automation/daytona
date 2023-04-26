@@ -1,3 +1,8 @@
+## 1.2.5 - April 26, 2022
+
+- Break out token renewal capabilities into its own function (#97)
+- Write env variable for single key, if not also written to file (#101)
+
 ## 1.2.4 - October 24, 2022
 
 - Handle data reading inconsistencies in singular definitions that have more than one data key (#91)
