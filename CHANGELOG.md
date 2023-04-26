@@ -1,4 +1,4 @@
-## 1.2.5 - UNRELEASED
+## 1.2.5 - April 26, 2023
 
 - Remove references to deprecated ioutil package (#103)
 - Enforce linting, fix suggestions (#102)
