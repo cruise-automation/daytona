@@ -44,3 +44,42 @@ func TestInvalidConfig(t *testing.T) {
 		t.Fatal("got an error in PKI config, didn't expect one, bailing")
 	}
 }
+
+func TestValidateAuthType(t *testing.T) {
+	t.Run("k8s_auth", func(t *testing.T) {
+		var config Config
+		config.K8SAuth = true
+		assert.True(t, config.ValidateAuthType())
+	})
+
+	t.Run("aws_auth", func(t *testing.T) {
+		var config Config
+		config.AWSAuth = true
+		assert.True(t, config.ValidateAuthType())
+	})
+
+	t.Run("azure_auth", func(t *testing.T) {
+		var config Config
+		config.AzureAuth = true
+		assert.True(t, config.ValidateAuthType())
+	})
+
+	t.Run("gcp_auth", func(t *testing.T) {
+		var config Config
+		config.GCPAuth = true
+		assert.True(t, config.ValidateAuthType())
+	})
+
+	t.Run("no_auth", func(t *testing.T) {
+		var config Config
+		config.NoAuth = true
+		assert.True(t, config.ValidateAuthType())
+	})
+
+	t.Run("multiple_auth_configured", func(t *testing.T) {
+		var config Config
+		config.K8SAuth = true
+		config.AWSAuth = true
+		assert.False(t, config.ValidateAuthType())
+	})
+}

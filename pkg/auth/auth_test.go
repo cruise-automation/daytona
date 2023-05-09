@@ -96,6 +96,18 @@ func TestAuthPanic(t *testing.T) {
 	assert.Panics(t, func() { EnsureAuthenticated(client, config) }, "The code did not panic when it should have")
 }
 
+func TestNoAuth(t *testing.T) {
+	var config cfg.Config
+	config.NoAuth = true
+	client, err := testhelpers.GetTestClient("nan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(testToken)
+	config.MaximumAuthRetry = 1
+	assert.False(t, EnsureAuthenticated(client, config))
+}
+
 type MockedService struct {
 	mock.Mock
 }

@@ -51,6 +51,7 @@ const (
 	flagK8SAuth    = "k8s-auth"
 	flagGCPAuth    = "gcp-auth"
 	flagAzureAuth  = "azure-auth"
+	flagNoAuth     = "no-auth"
 )
 
 func init() {
@@ -156,6 +157,10 @@ func init() {
 		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("AZURE_AUTH", "false"))
 		return err == nil && b
 	}(), "select Azure IAM auth as the vault authentication mechanism (env: AZURE_AUTH)")
+	flag.BoolVar(&config.NoAuth, flagNoAuth, func() bool {
+		b, err := strconv.ParseBool(cfg.BuildDefaultConfigItem("NO_AUTH", "false"))
+		return err == nil && b
+	}(), "disables authentication. Assumes that a valid vault token exists via the VAULT_TOKEN environment variable or in the TokenPath. No attempt will be made to authenticate if the Vault token is missing. (env: NO_AUTH)")
 }
 
 func main() {
@@ -164,7 +169,7 @@ func main() {
 	log.Info().Str("version", version).Msg("Starting...")
 
 	if !config.ValidateAuthType() {
-		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth}).Msg("You must provide an auth method. Exiting.")
+		log.Fatal().Strs("authFlags", []string{flagK8SAuth, flagAWSIAMAuth, flagGCPAuth, flagAzureAuth, flagNoAuth}).Msg("You must provide an auth method. Exiting.")
 	}
 
 	var mountPath string
