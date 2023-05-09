@@ -94,6 +94,11 @@ func EnsureAuthenticated(client *api.Client, config cfg.Config) bool {
 	}
 	log.Info().Err(err).Str("tokenPath", config.TokenPath).Msg("File token failed, trying to re-authenticate")
 
+	if config.NoAuth {
+		log.Error().Msg("Authentication is disabled. No attempts will be made to authenticate.")
+		return false
+	}
+
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 15
 
