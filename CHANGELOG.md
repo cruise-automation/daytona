@@ -1,3 +1,7 @@
+## 1.3.0 - September 26, 2023
+
+- support disabling authentication if a valid vault token exists (#106)
+
 ## 1.2.5 - April 26, 2023
 
 - Remove references to deprecated ioutil package (#103)
