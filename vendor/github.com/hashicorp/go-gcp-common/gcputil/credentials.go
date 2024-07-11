@@ -14,11 +14,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/google/externalaccount"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/googleapi"
 )
@@ -39,7 +41,16 @@ const (
 	// googleOAuthProviderX509CertURLPath is a URL path to Google's public OAuth keys.
 	// Using v1 returns the keys in X.509 certificate format.
 	googleOAuthProviderX509CertURLPath = "/oauth2/v1/certs"
+
+	// Default service endpoint for interaction with the IAM Credentials API
+	iamCredentialsAPIsEndpoint = "https://iamcredentials.googleapis.com"
+
+	// defaultJWTSubjectTokenType is the token type expected by the STS API
+	// when requesting for STS Tokens
+	defaultJWTSubjectTokenType = "urn:ietf:params:oauth:token-type:jwt"
 )
+
+var defaultTokenAuthScopes = []string{"https://www.googleapis.com/auth/cloud-platform"}
 
 // GcpCredentials represents a simplified version of the Google Cloud Platform credentials file format.
 type GcpCredentials struct {
@@ -48,6 +59,34 @@ type GcpCredentials struct {
 	PrivateKeyId string `json:"private_key_id" structs:"private_key_id" mapstructure:"private_key_id"`
 	PrivateKey   string `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 	ProjectId    string `json:"project_id" structs:"project_id" mapstructure:"project_id"`
+}
+
+type ExternalAccountConfig struct {
+	// External Account fields
+	Audience            string
+	TTL                 time.Duration
+	ServiceAccountEmail string
+	TokenSupplier       externalaccount.SubjectTokenSupplier
+}
+
+func (c *ExternalAccountConfig) GetExternalAccountCredentials(ctx context.Context) (*google.Credentials, error) {
+	config := externalaccount.Config{
+		Audience:                       strings.TrimPrefix(c.Audience, "https:"),
+		SubjectTokenType:               defaultJWTSubjectTokenType,
+		ServiceAccountImpersonationURL: fmt.Sprintf("%s/v1/projects/-/serviceAccounts/%s:generateAccessToken", iamCredentialsAPIsEndpoint, c.ServiceAccountEmail),
+		ServiceAccountImpersonationLifetimeSeconds: int(c.TTL.Seconds()),
+		SubjectTokenSupplier:                       c.TokenSupplier,
+		Scopes:                                     defaultTokenAuthScopes,
+	}
+
+	ts, err := externalaccount.NewTokenSource(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &google.Credentials{
+		TokenSource: ts,
+	}, nil
 }
 
 // FindCredentials attempts to obtain GCP credentials in the
