@@ -11,9 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-ARG GO_VERSION=1.18.3
+ARG GO_VERSION=1.21.12
 FROM golang:${GO_VERSION}-alpine AS builder
-ENV GOFLAGS -mod=vendor
+ENV GOFLAGS -mod=readonly
 RUN apk --update add ca-certificates make upx git
 WORKDIR /go/src/github.com/cruise-automation/daytona
 COPY . .

@@ -14,8 +14,8 @@
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TAG=$(VERSION:v%=%) # drop the v-prefix for docker images, per convention
-PACKAGES=$(shell go list ./... | grep -v /vendor/)
-GOFILES=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
+PACKAGES=$(shell go list -mod=readonly ./...)
+GOFILES=$(shell find . -type f -name '*.go'")
 GO_LDFLAGS=-ldflags '-s -w -X main.version=${VERSION}'
 
 .PHONY: entry
@@ -31,7 +31,7 @@ endif
 
 .PHONY: test
 test:
-	go test -race -cover -count=1 -v ${PACKAGES}
+	go test -race -cover -count=1 -v -mod=readonly ${PACKAGES}
 
 .PHONY: coverage
 coverage:
@@ -40,16 +40,15 @@ coverage:
 
 .PHONY: lint
 lint:
-	go vet ${PACKAGES}
+	go vet -mod=readonly ${PACKAGES}
 	gofmt -d -l ${GOFILES}
 	test -z $(shell gofmt -d -l ${GOFILES})
-	GO111MODULE=off \
-	go get -u golang.org/x/lint/golint
-	golint -set_exit_status ${PACKAGES}
+	GO111MODULE=off go get -u golang.org/x/lint/golint
+	$(shell go env GOPATH)/bin/golint -set_exit_status ${PACKAGES}
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build ${GO_LDFLAGS} -o daytona cmd/daytona/main.go
+	CGO_ENABLED=0 go build ${GO_LDFLAGS} -mod=readonly -o daytona cmd/daytona/main.go
 	@command -v upx && upx daytona || echo "[INFO] No upx installed, not compressing."
 
 .PHONY: image
