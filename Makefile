@@ -15,7 +15,7 @@
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TAG=$(VERSION:v%=%) # drop the v-prefix for docker images, per convention
 PACKAGES=$(shell go list -mod=readonly ./...)
-GOFILES=$(shell find . -type f -name '*.go'")
+GOFILES=$(shell find . -type f -name '*.go')
 GO_LDFLAGS=-ldflags '-s -w -X main.version=${VERSION}'
 
 .PHONY: entry
