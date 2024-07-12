@@ -40,11 +40,8 @@ coverage:
 
 .PHONY: lint
 lint:
-	go vet -mod=readonly ${PACKAGES}
-	gofmt -d -l ${GOFILES}
-	test -z $(shell gofmt -d -l ${GOFILES})
-	GO111MODULE=off go get -u golang.org/x/lint/golint
-	$(shell go env GOPATH)/bin/golint -set_exit_status ${PACKAGES}
+	@golangci-lint version
+	golangci-lint --verbose run --timeout=5m ./...
 
 .PHONY: build
 build:
