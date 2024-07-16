@@ -42,7 +42,7 @@ coverage:
 lint:
 	@command -v golangci-lint || (echo "golangci-lint not installed. See https://golangci-lint.run/welcome/install/"; exit 1)
 	@golangci-lint version
-	golangci-lint --verbose run --timeout=5m ./...
+	golangci-lint run --timeout=5m ./...
 
 .PHONY: build
 build:
