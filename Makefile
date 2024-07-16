@@ -14,43 +14,46 @@
 
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
 VERSION_TAG=$(VERSION:v%=%) # drop the v-prefix for docker images, per convention
-PACKAGES=$(shell go list ./... | grep -v /vendor/)
-GOFILES=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
+PACKAGES=$(shell go list -mod=readonly ./...)
+GOFILES=$(shell find . -type f -name '*.go')
 GO_LDFLAGS=-ldflags '-s -w -X main.version=${VERSION}'
 
-.PHONY: entry test lint build image push-image
-
+.PHONY: entry
 entry:
 	@echo "These are your options:"
 	@cat Makefile
 
+.PHONY: check
 check:
 ifndef VERSION_TAG
 	$(error VERSION_TAG must be set for image management)
 endif
 
+.PHONY: test
 test:
-	go test -race -cover -count=1 -v ${PACKAGES}
+	go test -race -cover -count=1 -v -mod=readonly ${PACKAGES}
 
+.PHONY: coverage
 coverage:
 	go test -cover -count=1 -coverprofile=coverage.out -v ${PACKAGES}
 	go tool cover -html=coverage.out
 
+.PHONY: lint
 lint:
-	go vet ${PACKAGES}
-	gofmt -d -l ${GOFILES}
-	test -z $(shell gofmt -d -l ${GOFILES})
-	GO111MODULE=off \
-	go get -u golang.org/x/lint/golint
-	golint -set_exit_status ${PACKAGES}
+	@command -v golangci-lint || (echo "golangci-lint not installed. See https://golangci-lint.run/welcome/install/"; exit 1)
+	@golangci-lint version
+	golangci-lint run --timeout=5m ./...
 
+.PHONY: build
 build:
-	CGO_ENABLED=0 go build ${GO_LDFLAGS} -o daytona cmd/daytona/main.go
+	CGO_ENABLED=0 go build ${GO_LDFLAGS} -mod=readonly -o daytona cmd/daytona/main.go
 	@command -v upx && upx daytona || echo "[INFO] No upx installed, not compressing."
 
+.PHONY: image
 image: check
 	docker build -t daytona:${VERSION_TAG} .
 
+.PHONY: push-image
 push-image: check
 	@if test "$(REGISTRY)" = "" ; then \
         echo "REGISTRY but must be set in order to continue"; \
