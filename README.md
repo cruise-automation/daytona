@@ -2,7 +2,7 @@
 
 | :warning: WARNING           |
 |:----------------------------|
-| This project is no longer actively maintained, except for critical security updates. We recommend using Hashicorp native tooling such as [Vault Agent](https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent) for server workloads, or the [Vault Secrets Operator](https://developer.hashicorp.com/vault/tutorials/kubernetes/vault-secrets-operator) for Kubernetes workloads |
+| This project is no longer actively maintained, except for critical security updates. We recommend using HashiCorp native tooling such as [Vault Agent](https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent) for server workloads, or the [Vault Secrets Operator](https://developer.hashicorp.com/vault/tutorials/kubernetes/vault-secrets-operator) for Kubernetes workloads.|
 
 ![DAYTONA](project/images/logo.png)
 
