@@ -1,5 +1,9 @@
 [![Testing](https://github.com/cruise-automation/daytona/actions/workflows/main.yml/badge.svg)](https://github.com/cruise-automation/daytona/actions/workflows/main.yml)
 
+| :warning: WARNING           |
+|:----------------------------|
+| This project is no longer actively maintained, except for critical security updates. We recommend using Hashicorp native tooling such as [Vault Agent](https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent) for server, or the [Vault Secrets Operator](https://developer.hashicorp.com/vault/tutorials/kubernetes/vault-secrets-operator) for Kubernetes |
+
 ![DAYTONA](project/images/logo.png)
 
 This is intended to be a lighter, alternative, implementation of the Vault client CLI primarily for services and containers. Its core features are the ability to automate authentication, fetching of secrets, and automated token renewal.
