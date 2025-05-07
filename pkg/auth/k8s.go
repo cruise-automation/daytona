@@ -18,6 +18,7 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -117,7 +118,8 @@ func inferVaultAuthRoleName(config *cfg.Config) (string, error) {
 
 // inferVaultAuthMount attempts to figure out where the auth path for the current k8s cluster is in vault, and return it
 func inferVaultAuthMount() (string, error) {
-	clusterName, err := metadata.InstanceAttributeValue("cluster-name")
+	ctx := context.Background()
+	clusterName, err := metadata.InstanceAttributeValueWithContext(ctx, "cluster-name")
 
 	return fmt.Sprintf("kubernetes-gcp-%s", clusterName), err
 }
